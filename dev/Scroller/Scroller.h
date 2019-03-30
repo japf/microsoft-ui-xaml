@@ -304,7 +304,8 @@ private:
         std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
         ScrollerDimension dimension);
     template <typename T> void FixSnapPointRanges(
-        std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet);
+        std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
+        bool forImpulse);
     void SetupInteractionTrackerBoundaries();
     void SetupInteractionTrackerZoomFactorBoundaries(
         double minZoomFactor, double maxZoomFactor);
@@ -825,10 +826,6 @@ private:
     winrt::IScrollController::ScrollFromRequested_revoker m_verticalScrollControllerScrollFromRequestedToken{};
     winrt::IScrollController::InteractionRequested_revoker m_verticalScrollControllerInteractionRequestedToken{};
     winrt::IScrollController::InteractionInfoChanged_revoker m_verticalScrollControllerInteractionInfoChangedToken{};
-
-    // Used on platforms where we have XamlRoot.
-    tracker_ref<winrt::IInspectable> m_onXamlRootKeyDownEventHandler{ this };
-    tracker_ref<winrt::IInspectable> m_onXamlRootKeyUpEventHandler{ this };
 
     // Used for mouse-wheel scrolling on pre-RS5 Windows versions.
     winrt::DisplayInformation::DpiChanged_revoker m_dpiChangedRevoker{};

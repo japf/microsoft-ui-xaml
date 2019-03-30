@@ -168,7 +168,22 @@ double ScrollSnapPoint::Value()
     return m_value;
 }
 
+winrt::CompositionPropertySet ScrollSnapPoint::CreateSubExpressionsPropertySet(
+    winrt::InteractionTracker const& interactionTracker,
+    winrt::Compositor const& compositor,
+    winrt::hstring const& target,
+    winrt::ExpressionAnimation* subExpression1,
+    winrt::ExpressionAnimation* subExpression2)
+{
+    *subExpression1 = nullptr;
+    *subExpression2 = nullptr;
+    return nullptr;
+}
+
 winrt::ExpressionAnimation ScrollSnapPoint::CreateRestingPointExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
@@ -181,7 +196,9 @@ winrt::ExpressionAnimation ScrollSnapPoint::CreateRestingPointExpression(
 }
 
 winrt::ExpressionAnimation ScrollSnapPoint::CreateConditionalExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
     std::tuple<double, double> actualApplicableZone,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
@@ -193,15 +210,25 @@ winrt::ExpressionAnimation ScrollSnapPoint::CreateConditionalExpression(
     winrt::hstring scaledMaxApplicableRange = StringUtil::FormatString(
         L"(maxApplicableValue * %1!s!)",
         scale.data());
+    winrt::hstring scaledMinImpulseApplicableRange = StringUtil::FormatString(
+        L"(minImpulseApplicableValue * %1!s!)",
+        scale.data());
+    winrt::hstring scaledMaxImpulseApplicableRange = StringUtil::FormatString(
+        L"(maxImpulseApplicableValue * %1!s!)",
+        scale.data());
     winrt::hstring expression = StringUtil::FormatString(
-        L"%1!s! >= %2!s! && %1!s! <= %3!s!",
+        L"this.Target.IsInertiaFromImpulse ? (%1!s! >= %4!s! && %1!s! <= %5!s!) : (%1!s! >= %2!s! && %1!s! <= %3!s!)",
         targetExpression.data(),
         scaledMinApplicableRange.data(),
-        scaledMaxApplicableRange.data());
+        scaledMaxApplicableRange.data(),
+        scaledMinImpulseApplicableRange.data(),
+        scaledMaxImpulseApplicableRange.data());
     winrt::ExpressionAnimation conditionExpressionAnimation = compositor.CreateExpressionAnimation(expression);
 
     conditionExpressionAnimation.SetScalarParameter(L"minApplicableValue", static_cast<float>(std::get<0>(actualApplicableZone)));
     conditionExpressionAnimation.SetScalarParameter(L"maxApplicableValue", static_cast<float>(std::get<1>(actualApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"minImpulseApplicableValue", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"maxImpulseApplicableValue", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
     return conditionExpressionAnimation;
 }
 
@@ -214,13 +241,30 @@ ScrollerSnapPointSortPredicate ScrollSnapPoint::SortPredicate()
 }
 
 std::tuple<double, double> ScrollSnapPoint::DetermineActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint,
     SnapPointBase* nextSnapPoint)
 {
     return std::tuple<double, double>{
-        DetermineMinActualApplicableZone(actualApplicableZone, previousSnapPoint),
-        DetermineMaxActualApplicableZone(actualApplicableZone, nextSnapPoint) };
+        DetermineMinActualApplicableZone(previousSnapPoint),
+        DetermineMaxActualApplicableZone(nextSnapPoint) };
+}
+
+std::tuple<double, double> ScrollSnapPoint::DetermineActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue,
+    double nextIgnoredValue)
+{
+    return std::tuple<double, double>{
+        DetermineMinActualImpulseApplicableZone(
+            previousSnapPoint,
+            currentIgnoredValue,
+            previousIgnoredValue),
+        DetermineMaxActualImpulseApplicableZone(
+            nextSnapPoint,
+            currentIgnoredValue,
+            nextIgnoredValue) };
 }
 
 double ScrollSnapPoint::ActualValue() const
@@ -229,7 +273,6 @@ double ScrollSnapPoint::ActualValue() const
 }
 
 double ScrollSnapPoint::DetermineMinActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint) const
 {
     // If we are not passed a previousSnapPoint it means we are the first in the list, see if we expand to negative Infinity or stay put.
@@ -270,8 +313,31 @@ double ScrollSnapPoint::DetermineMinActualApplicableZone(
     }
 }
 
+double ScrollSnapPoint::DetermineMinActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue) const
+{
+    if (!previousSnapPoint)
+    {
+        return -INFINITY;
+    }
+    else
+    {
+        double previousMaxInfluence = previousSnapPoint->ImpulseInfluence(ActualValue(), previousIgnoredValue);
+
+        if (isnan(currentIgnoredValue))
+        {
+            return previousMaxInfluence;
+        }
+        else
+        {
+            return std::max(previousMaxInfluence, ActualValue());
+        }
+    }
+}
+
 double ScrollSnapPoint::DetermineMaxActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* nextSnapPoint) const
 {
     // If we are not passed a nextSnapPoint it means we are the last in the list, see if we expand to Infinity or stay put.
@@ -312,6 +378,30 @@ double ScrollSnapPoint::DetermineMaxActualApplicableZone(
     }
 }
 
+double ScrollSnapPoint::DetermineMaxActualImpulseApplicableZone(
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double nextIgnoredValue) const
+{
+    if (!nextSnapPoint)
+    {
+        return INFINITY;
+    }
+    else
+    {
+        double nextMinInfluence = nextSnapPoint->ImpulseInfluence(ActualValue(), nextIgnoredValue);
+
+        if (isnan(currentIgnoredValue))
+        {
+            return nextMinInfluence;
+        }
+        else
+        {
+            return std::min(ActualValue(), nextMinInfluence);
+        }
+    }
+}
+
 double ScrollSnapPoint::Influence(double edgeOfMidpoint) const
 {
     double actualValue = ActualValue();
@@ -340,6 +430,28 @@ double ScrollSnapPoint::Influence(double edgeOfMidpoint) const
 #endif
 }
 
+double ScrollSnapPoint::ImpulseInfluence(double edgeOfMidpoint, double ignoredValue) const
+{
+    double actualValue = ActualValue();
+    double midPoint = (actualValue + edgeOfMidpoint) / 2.0;
+
+    if (isnan(ignoredValue))
+    {
+        return midPoint;
+    }
+    else
+    {
+        if (actualValue <= edgeOfMidpoint)
+        {
+            return std::min(actualValue, midPoint);
+        }
+        else
+        {
+            return std::max(actualValue, midPoint);
+        }
+    }
+}
+
 void ScrollSnapPoint::Combine(
     int& combinationCount,
     winrt::SnapPointBase const& snapPoint) const
@@ -362,7 +474,14 @@ void ScrollSnapPoint::Combine(
     }
 }
 
-double ScrollSnapPoint::Evaluate(std::tuple<double, double> actualApplicableZone, double value) const
+int ScrollSnapPoint::SnapCount() const
+{
+    return 1;
+}
+
+double ScrollSnapPoint::Evaluate(
+    std::tuple<double, double> actualApplicableZone,
+    double value) const
 {
     if (value >= std::get<0>(actualApplicableZone) && value <= std::get<1>(actualApplicableZone))
     {
@@ -447,100 +566,219 @@ double RepeatedScrollSnapPoint::End()
     return m_end;
 }
 
+winrt::CompositionPropertySet RepeatedScrollSnapPoint::CreateSubExpressionsPropertySet(
+    winrt::InteractionTracker const& interactionTracker,
+    winrt::Compositor const& compositor,
+    winrt::hstring const& target,
+    winrt::ExpressionAnimation* subExpression1,
+    winrt::ExpressionAnimation* subExpression2)
+{
+    /*
+    fracTarget = (target - scaledFirst) / scaledInterval                     // unsnapped value in fractional intervals from first snapping value
+    scaledPrevSnap = ((Floor(fracTarget) * scaledInterval) + scaledFirst)    // first snapped value before unsnapped value
+    scaledNextSnap = ((Ceil(fracTarget) * scaledInterval) + scaledFirst)     // first snapped value after unsnapped value
+
+    // target may be equal to the current snap value and result in equal scaledPrevSnap and scaledNextSnap values.
+    */
+
+    *subExpression1 = nullptr;
+    *subExpression2 = nullptr;
+
+    winrt::CompositionPropertySet subExpressionsPropertySet = compositor.CreatePropertySet();
+
+    subExpressionsPropertySet.InsertScalar(L"scaledPrevSnap", 0.0f);
+    subExpressionsPropertySet.InsertScalar(L"scaledNextSnap", 0.0f);
+
+    winrt::hstring scaledPrevSnapExpression = StringUtil::FormatString(
+        L"Floor((it.%1!s! - (first * it.Scale)) / (itv * it.Scale)) * (itv * it.Scale) + (first * it.Scale)",
+        target.data());
+    winrt::hstring scaledNextSnapExpression = StringUtil::FormatString(
+        L"Ceil((it.%1!s! - (first * it.Scale)) / (itv * it.Scale)) * (itv * it.Scale) + (first * it.Scale)",
+        target.data());
+
+    winrt::ExpressionAnimation scaledPrevSnapExpressionAnimation = compositor.CreateExpressionAnimation(scaledPrevSnapExpression);
+    winrt::ExpressionAnimation scaledNextSnapExpressionAnimation = compositor.CreateExpressionAnimation(scaledNextSnapExpression);
+
+    scaledPrevSnapExpressionAnimation.SetScalarParameter(L"itv", static_cast<float>(m_interval));
+    scaledPrevSnapExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
+    scaledPrevSnapExpressionAnimation.SetReferenceParameter(L"it", interactionTracker);
+
+    scaledNextSnapExpressionAnimation.SetScalarParameter(L"itv", static_cast<float>(m_interval));
+    scaledNextSnapExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
+    scaledNextSnapExpressionAnimation.SetReferenceParameter(L"it", interactionTracker);
+
+    subExpressionsPropertySet.StartAnimation(L"scaledPrevSnap", scaledPrevSnapExpressionAnimation);
+    subExpressionsPropertySet.StartAnimation(L"scaledNextSnap", scaledNextSnapExpressionAnimation);
+
+    *subExpression1 = scaledPrevSnapExpressionAnimation;
+    *subExpression2 = scaledNextSnapExpressionAnimation;
+
+    return subExpressionsPropertySet;
+}
+
 winrt::ExpressionAnimation RepeatedScrollSnapPoint::CreateRestingPointExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
 {
     /*
-    ((Abs(target -                                         //The absolute value of the natural resting point minus
-    ((Floor((target - scaledFirst) / scaledInterval)       //How many intervals the natural resting point has passed
-     * scaledInterval) + scaledFirst)                      //The location of the repeated snap point just before the natural resting point
-    ) >= Abs(target -                                      //If it's greater than the absolute value of the natural resting point minus
-    ((Ceil((target - scaledFirst) / scaledInterval)
-     * scaledInterval) + scaledFirst)                      //The location of the repeated snap point just after the natural resting point
-    )) && (((Ceil((target - scaledFirst) / scaledInterval)
-     * scaledInterval) + scaledFirst) <= scaledEnd)        //And the location of the repeated snap point just after the natural resting point is before the end value
-    ) ? ((Ceil((target - scaledFirst) / scaledInterval)    //Then return the location of the repeated snap point just after the natural resting point
-     * scaledInterval) + scaledFirst)
-     : ((Floor((target - scaledFirst) / scaledInterval)    //Otherwise return the location of the repeated snap point just before the natural resting point 
-     * scaledInterval) + scaledFirst)
+    fracTarget = (target - scaledFirst) / scaledInterval                     // unsnapped value in fractional intervals from first snapping value
+    scaledPrevSnap = ((Floor(fracTarget) * scaledInterval) + scaledFirst)    // first snapped value before unsnapped value
+    scaledNextSnap = ((Ceil(fracTarget) * scaledInterval) + scaledFirst)     // first snapped value after unsnapped value
+    scaledEffectiveEnd = (IsInertiaFromImpulse ? scaledImpEnd : scaledEnd)   // regular or impulse upper bound of applicable zone
+     
+    expression:
+     ((Abs(target - scaledPrevSnap) >= Abs(target - scaledNextSnap)) && (scaledNextSnap <= scaledEffectiveEnd))
+     ?
+     // scaledNextSnap value is closer to unsnapped value and within applicable zone.
+     (
+      IsInertiaFromImpulse
+      ?
+      // impulse mode.
+      (
+       scaledNextSnap == scaledImpIgn
+       ?
+       (
+        scaledPrevSnap == scaledImpIgn
+        ?
+        // previous and next snapped values are the ignored one. Stay on it.
+        scaledImpIgn
+        :
+        // next snapped value is ignored. Pick the previous snapped value if any, else the ignored value.
+        (scaledImpIgn == scaledFirst ? scaledFirst : scaledImpIgn - scaledInterval)
+       )
+       :
+       // Pick next snapped value.
+       scaledNextSnap
+      )
+      :
+      // regular mode. Pick next snapped value.
+      scaledNextSnap
+     )
+     :
+     // scaledPrevSnap value is closer to unsnapped value.
+     (
+      IsInertiaFromImpulse
+      ?
+      // impulse mode.
+      (
+       scaledPrevSnap == scaledImpIgn
+       ?
+       // previous snapped value is ignored. Pick the next snapped value if any, else the ignored value.
+       (scaledImpIgn + scaledInterval <= scaledEffectiveEnd ? scaledImpIgn + scaledInterval : scaledImpIgn)
+       :
+       // Pick previous snapped value.
+       scaledPrevSnap
+      )
+      :
+      // regular mode. pick previous snapped value.
+      scaledPrevSnap
+     )
     */
 
     winrt::hstring targetExpression = GetTargetExpression(target);
     winrt::hstring scaledInterval = StringUtil::FormatString(
-        L"(itv * %1!s!)",
+        L"(itv*%1!s!)",
         scale.data());
     winrt::hstring scaledEnd = StringUtil::FormatString(
-        L"(end * %1!s!)",
+        L"(end*%1!s!)",
+        scale.data());
+    winrt::hstring scaledImpEnd = StringUtil::FormatString(
+        L"(impEnd*%1!s!)",
         scale.data());
     winrt::hstring scaledFirst = StringUtil::FormatString(
-        L"(first * %1!s!)",
+        L"(first*%1!s!)",
+        scale.data());
+    winrt::hstring scaledImpIgn = StringUtil::FormatString(
+        L"(impIgn*%1!s!)",
         scale.data());
     winrt::hstring expression = StringUtil::FormatString(
-        L"((Abs(%1!s! - ((Floor((%1!s! - %4!s!) / %2!s!) * %2!s!) + %4!s!)) >= Abs(%1!s! - ((Ceil((%1!s! - %4!s!) / %2!s!) * %2!s!) + %4!s!))) && (((Ceil((%1!s! - %4!s!) / %2!s!) * %2!s!) + %4!s!) <= %3!s!)) ? ((Ceil((%1!s! - %4!s!) / %2!s!) * %2!s!) + %4!s!) : ((Floor((%1!s! - %4!s!) / %2!s!) * %2!s!) + %4!s!)",
+        L"((Abs(%1!s! - subPS.scaledPrevSnap) >= Abs(%1!s! - subPS.scaledNextSnap)) && (subPS.scaledNextSnap <= (this.Target.IsInertiaFromImpulse ? %4!s! : %3!s!))) ? (this.Target.IsInertiaFromImpulse ? (subPS.scaledNextSnap == %6!s! ? (subPS.scaledPrevSnap == %6!s! ? %6!s! : (%6!s! == %5!s! ? %5!s! : %6!s! - %2!s!)) : subPS.scaledNextSnap) : subPS.scaledNextSnap) : (this.Target.IsInertiaFromImpulse ? (subPS.scaledPrevSnap == %6!s! ? (%6!s! + %2!s! <= (this.Target.IsInertiaFromImpulse ? %4!s! : %3!s!) ? %6!s! + %2!s! : %6!s!) : subPS.scaledPrevSnap) : subPS.scaledPrevSnap)",
         targetExpression.data(),
         scaledInterval.data(),
         scaledEnd.data(),
-        scaledFirst.data());
+        scaledImpEnd.data(),
+        scaledFirst.data(),
+        scaledImpIgn.data());
     winrt::ExpressionAnimation restingPointExpressionAnimation = compositor.CreateExpressionAnimation(expression);
 
     restingPointExpressionAnimation.SetScalarParameter(L"itv", static_cast<float>(m_interval));
     restingPointExpressionAnimation.SetScalarParameter(L"end", static_cast<float>(ActualEnd()));
+    restingPointExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
     restingPointExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
+    restingPointExpressionAnimation.SetScalarParameter(L"impIgn", static_cast<float>(ActualImpulseIgnoredValue(ignoredValue)));
+    restingPointExpressionAnimation.SetReferenceParameter(L"subPS", subExpressionsPropertySet);
     return restingPointExpressionAnimation;
 }
 
 winrt::ExpressionAnimation RepeatedScrollSnapPoint::CreateConditionalExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
     std::tuple<double, double> actualApplicableZone,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
 {
+    MUX_ASSERT(std::get<0>(actualApplicableZone) == ActualStart());
+    MUX_ASSERT(std::get<1>(actualApplicableZone) == ActualEnd());
+
     /*
-    target >= scaledStart &&
-    target <= scaledEnd &&                                  //If we are within the start and end and...
-    (((((Floor((target - scaledFirst) / scaledInterval)     //How many intervals the natural resting point has passed
-     * scaledInterval) + scaledFirst)                       //The location of the repeated snap point just before the natural resting point
-     + scaledApplicableRange) >= target) || (               //Plus the applicable range is greater than the natural resting point or... 
-    ((((Ceil((target - scaledFirst) / scaledInterval)
-     * scaledInterval) + scaledFirst)                       //The location of the repeated snap point just after the natural resting point
-     - scaledApplicableRange) <= target)                    //Minus the applicable range is less than the natural resting point.
-     && (((Ceil((target - scaledFirst) / scaledInterval)    //And the snap point after the natural resting point is less than or equal to the end value
-     * scaledInterval) + scaledFirst) <= scaledEnd)))
+    fracTarget = (target - scaledFirst) / scaledInterval                           // unsnapped value in fractional intervals from first snapping value
+    scaledPrevSnap = ((Floor(fracTarget) * scaledInterval) + scaledFirst)          // first snapped value before unsnapped value
+    scaledNextSnap = ((Ceil(fracTarget) * scaledInterval) + scaledFirst)           // first snapped value after unsnapped value
+    scaledEffectiveEnd = (IsInertiaFromImpulse ? scaledImpEnd : scaledEnd)         // regular or impulse upper bound of applicable zone
+
+    (
+     (!IsInertiaFromImpulse && target >= scaledStart && target <= scaledEnd)       // If we are within the start and end in non-impulse mode
+     ||
+     (IsInertiaFromImpulse && target >= scaledImpStart && target <= scaledImpEnd)  // or we are within the impulse start and end in impulse mode
+    )
+    &&                                                                             // and...
+    (                                                                              // The location of the repeated snap point just before the natural resting point
+     (scaledPrevSnap + scaledAppRange >= target)                                   // Plus the applicable range is greater than the natural resting point
+     ||                                                                            // or...
+     (                                                                             // The location of the repeated snap point just after the natural resting point
+      (scaledNextSnap - scaledAppRange <= target) &&                               // Minus the applicable range is less than the natural resting point.
+      (scaledNextSnap <= scaledEffectiveEnd)                                       // And the snap point after the natural resting point is less than or equal to the effective end value
+     )
+    )
     */
 
     winrt::hstring targetExpression = GetTargetExpression(target);
-    winrt::hstring scaledInterval = StringUtil::FormatString(
-        L"(itv * %1!s!)",
-        scale.data());
     winrt::hstring scaledStart = StringUtil::FormatString(
-        L"(start * %1!s!)",
+        L"(start*%1!s!)",
         scale.data());
     winrt::hstring scaledEnd = StringUtil::FormatString(
-        L"(end * %1!s!)",
+        L"(end*%1!s!)",
         scale.data());
-    winrt::hstring scaledApplicableRange = StringUtil::FormatString(
-        L"(applicableRange * %1!s!)",
+    winrt::hstring scaledImpStart = StringUtil::FormatString(
+        L"(impStart*%1!s!)",
         scale.data());
-    winrt::hstring scaledFirst = StringUtil::FormatString(
-        L"(first * %1!s!)",
+    winrt::hstring scaledImpEnd = StringUtil::FormatString(
+        L"(impEnd*%1!s!)",
+        scale.data());
+    winrt::hstring scaledAppRange = StringUtil::FormatString(
+        L"(appRange*%1!s!)",
         scale.data());
     winrt::hstring expression = StringUtil::FormatString(
-        L"%1!s! >= %3!s! && %1!s! <= %4!s! && (((((Floor((%1!s! - %6!s!) / %2!s!) * %2!s!) + %6!s!) + %5!s!) >= %1!s!) || (((((Ceil((%1!s! - %6!s!) / %2!s!) * %2!s!) + %6!s!) - %5!s!) <= %1!s!) && (((Ceil((%1!s! - %6!s!) / %2!s!) * %2!s!) + %6!s!) <= %4!s!)))",
+        L"((!this.Target.IsInertiaFromImpulse && %1!s! >= %2!s! && %1!s! <= %3!s!) || (this.Target.IsInertiaFromImpulse && %1!s! >= %4!s! && %1!s! <= %5!s!)) && ((subPS.scaledPrevSnap + %6!s! >= %1!s!) || ((subPS.scaledNextSnap - %6!s! <= %1!s!) && (subPS.scaledNextSnap <= (this.Target.IsInertiaFromImpulse ? %5!s! : %3!s!))))",
         targetExpression.data(),
-        scaledInterval.data(),
         scaledStart.data(),
         scaledEnd.data(),
-        scaledApplicableRange.data(),
-        scaledFirst.data());
+        scaledImpStart.data(),
+        scaledImpEnd.data(),
+        scaledAppRange.data());
     winrt::ExpressionAnimation conditionExpressionAnimation = compositor.CreateExpressionAnimation(expression);
 
-    conditionExpressionAnimation.SetScalarParameter(L"itv", static_cast<float>(m_interval));
     conditionExpressionAnimation.SetScalarParameter(L"start", static_cast<float>(ActualStart()));
     conditionExpressionAnimation.SetScalarParameter(L"end", static_cast<float>(ActualEnd()));
-    conditionExpressionAnimation.SetScalarParameter(L"applicableRange", static_cast<float>(m_specifiedApplicableRange));
-    conditionExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
+    conditionExpressionAnimation.SetScalarParameter(L"impStart", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"appRange", static_cast<float>(m_specifiedApplicableRange));
+    conditionExpressionAnimation.SetReferenceParameter(L"subPS", subExpressionsPropertySet);
     return conditionExpressionAnimation;
 }
 
@@ -551,13 +789,12 @@ ScrollerSnapPointSortPredicate RepeatedScrollSnapPoint::SortPredicate()
 }
 
 std::tuple<double, double> RepeatedScrollSnapPoint::DetermineActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint,
     SnapPointBase* nextSnapPoint)
 {
     std::tuple<double, double> actualApplicableZoneReturned = std::tuple<double, double>{
-        DetermineMinActualApplicableZone(actualApplicableZone, previousSnapPoint),
-        DetermineMaxActualApplicableZone(actualApplicableZone, nextSnapPoint) };
+        DetermineMinActualApplicableZone(previousSnapPoint),
+        DetermineMaxActualApplicableZone(nextSnapPoint) };
 
     // Influence() will not have thrown if either of the adjacent snap points are also repeated snap points which have the same start and end, however this is not allowed.
     // We only need to check the nextSnapPoint because of the symmetry in the algorithm.
@@ -568,6 +805,24 @@ std::tuple<double, double> RepeatedScrollSnapPoint::DetermineActualApplicableZon
     }
 
     return actualApplicableZoneReturned;
+}
+
+std::tuple<double, double> RepeatedScrollSnapPoint::DetermineActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue,
+    double nextIgnoredValue)
+{
+    return std::tuple<double, double>{
+        DetermineMinActualImpulseApplicableZone(
+            previousSnapPoint,
+            currentIgnoredValue,
+            previousIgnoredValue),
+        DetermineMaxActualImpulseApplicableZone(
+            nextSnapPoint,
+            currentIgnoredValue,
+            nextIgnoredValue) };
 }
 
 double RepeatedScrollSnapPoint::ActualOffset() const
@@ -585,6 +840,11 @@ double RepeatedScrollSnapPoint::ActualEnd() const
     return m_end + m_alignmentAdjustment;
 }
 
+double RepeatedScrollSnapPoint::ActualImpulseIgnoredValue(double impulseIgnoredValue) const
+{
+    return impulseIgnoredValue + m_alignmentAdjustment;
+}
+
 double RepeatedScrollSnapPoint::DetermineFirstRepeatedSnapPointValue() const
 {
     double actualOffset = ActualOffset();
@@ -596,8 +856,18 @@ double RepeatedScrollSnapPoint::DetermineFirstRepeatedSnapPointValue() const
     return actualOffset - std::floor((actualOffset - actualStart) / m_interval) * m_interval;
 }
 
+double RepeatedScrollSnapPoint::DetermineLastRepeatedSnapPointValue() const
+{
+    double actualOffset = ActualOffset();
+    double actualEnd = ActualEnd();
+
+    MUX_ASSERT(actualOffset <= m_end);
+    MUX_ASSERT(m_interval > 0.0);
+
+    return actualOffset + std::floor((actualEnd - actualOffset) / m_interval) * m_interval;
+}
+
 double RepeatedScrollSnapPoint::DetermineMinActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint) const
 {
     double actualStart = ActualStart();
@@ -611,8 +881,27 @@ double RepeatedScrollSnapPoint::DetermineMinActualApplicableZone(
     return actualStart;
 }
 
+double RepeatedScrollSnapPoint::DetermineMinActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue) const
+{
+    if (previousSnapPoint)
+    {
+        if (currentIgnoredValue == DetermineFirstRepeatedSnapPointValue())
+        {
+            return currentIgnoredValue;
+        }
+
+        if (!isnan(previousIgnoredValue))
+        {
+            return previousSnapPoint->ImpulseInfluence(ActualStart(), previousIgnoredValue);
+        }
+    }
+    return ActualStart();
+}
+
 double RepeatedScrollSnapPoint::DetermineMaxActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* nextSnapPoint) const
 {
     double actualEnd = ActualEnd();
@@ -624,6 +913,26 @@ double RepeatedScrollSnapPoint::DetermineMaxActualApplicableZone(
         nextSnapPoint->Influence(actualEnd);
     }
     return actualEnd;
+}
+
+double RepeatedScrollSnapPoint::DetermineMaxActualImpulseApplicableZone(
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double nextIgnoredValue) const
+{
+    if (nextSnapPoint)
+    {
+        if (currentIgnoredValue == DetermineLastRepeatedSnapPointValue())
+        {
+            return currentIgnoredValue;
+        }
+
+        if (!isnan(nextIgnoredValue))
+        {
+            return nextSnapPoint->ImpulseInfluence(ActualEnd(), nextIgnoredValue);
+        }
+    }
+    return ActualEnd();
 }
 
 void RepeatedScrollSnapPoint::ValidateConstructorParameters(
@@ -683,7 +992,32 @@ double RepeatedScrollSnapPoint::Influence(double edgeOfMidpoint) const
         // TODO: Provide custom error message
         throw winrt::hresult_error(E_INVALIDARG);
     }
-    return 0.0f;
+    return 0.0;
+}
+
+double RepeatedScrollSnapPoint::ImpulseInfluence(double edgeOfMidpoint, double ignoredValue) const
+{
+    if (edgeOfMidpoint <= ActualStart())
+    {
+        if (ignoredValue == DetermineFirstRepeatedSnapPointValue())
+        {
+            return ignoredValue;
+        }
+        return ActualStart();
+    }
+    else if (edgeOfMidpoint >= ActualEnd())
+    {
+        if (ignoredValue == DetermineLastRepeatedSnapPointValue())
+        {
+            return ignoredValue;
+        }
+        return ActualEnd();
+    }
+    else
+    {
+        MUX_ASSERT(false);
+        return 0.0;
+    }
 }
 
 void RepeatedScrollSnapPoint::Combine(
@@ -695,7 +1029,14 @@ void RepeatedScrollSnapPoint::Combine(
     throw winrt::hresult_error(E_INVALIDARG);
 }
 
-double RepeatedScrollSnapPoint::Evaluate(std::tuple<double, double> actualApplicableZone, double value) const
+int RepeatedScrollSnapPoint::SnapCount() const
+{
+    return static_cast<int>((m_end - m_start) / m_interval);
+}
+
+double RepeatedScrollSnapPoint::Evaluate(
+    std::tuple<double, double> actualApplicableZone,
+    double value) const
 {
     if (value >= ActualStart() && value <= ActualEnd())
     {
@@ -771,7 +1112,23 @@ double ZoomSnapPoint::Value()
 }
 
 // For zoom snap points scale == L"1.0".
+winrt::CompositionPropertySet ZoomSnapPoint::CreateSubExpressionsPropertySet(
+    winrt::InteractionTracker const& interactionTracker,
+    winrt::Compositor const& compositor,
+    winrt::hstring const& target,
+    winrt::ExpressionAnimation* subExpression1,
+    winrt::ExpressionAnimation* subExpression2)
+{
+    *subExpression1 = nullptr;
+    *subExpression2 = nullptr;
+    return nullptr;
+}
+
+// For zoom snap points scale == L"1.0".
 winrt::ExpressionAnimation ZoomSnapPoint::CreateRestingPointExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
@@ -784,19 +1141,23 @@ winrt::ExpressionAnimation ZoomSnapPoint::CreateRestingPointExpression(
 
 // For zoom snap points scale == L"1.0".
 winrt::ExpressionAnimation ZoomSnapPoint::CreateConditionalExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
     std::tuple<double, double> actualApplicableZone,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
 {
     winrt::hstring targetExpression = GetTargetExpression(target);
     winrt::hstring expression = StringUtil::FormatString(
-        L"%1!s! >= minApplicableValue && %1!s! <= maxApplicableValue",
+        L"this.Target.IsInertiaFromImpulse ? (%1!s! >= minImpulseApplicableValue && %1!s! <= maxImpulseApplicableValue) : (%1!s! >= minApplicableValue && %1!s! <= maxApplicableValue)",
         targetExpression.data());
     winrt::ExpressionAnimation conditionExpressionAnimation = compositor.CreateExpressionAnimation(expression);
 
     conditionExpressionAnimation.SetScalarParameter(L"minApplicableValue", static_cast<float>(std::get<0>(actualApplicableZone)));
     conditionExpressionAnimation.SetScalarParameter(L"maxApplicableValue", static_cast<float>(std::get<1>(actualApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"minImpulseApplicableValue", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"maxImpulseApplicableValue", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
     return conditionExpressionAnimation;
 }
 
@@ -807,17 +1168,33 @@ ScrollerSnapPointSortPredicate ZoomSnapPoint::SortPredicate()
 }
 
 std::tuple<double, double> ZoomSnapPoint::DetermineActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint,
     SnapPointBase* nextSnapPoint)
 {
     return std::tuple<double, double>{
-        DetermineMinActualApplicableZone(actualApplicableZone, previousSnapPoint),
-        DetermineMaxActualApplicableZone(actualApplicableZone, nextSnapPoint) };
+        DetermineMinActualApplicableZone(previousSnapPoint),
+        DetermineMaxActualApplicableZone(nextSnapPoint) };
+}
+
+std::tuple<double, double> ZoomSnapPoint::DetermineActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue,
+    double nextIgnoredValue)
+{
+    return std::tuple<double, double>{
+        DetermineMinActualImpulseApplicableZone(
+            previousSnapPoint,
+            currentIgnoredValue,
+            previousIgnoredValue),
+        DetermineMaxActualImpulseApplicableZone(
+            nextSnapPoint,
+            currentIgnoredValue,
+            nextIgnoredValue) };
 }
 
 double ZoomSnapPoint::DetermineMinActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint) const
 {
     // If we are not passed a previousSnapPoint it means we are the first in the list, see if we expand to negative Infinity or stay put.
@@ -858,8 +1235,31 @@ double ZoomSnapPoint::DetermineMinActualApplicableZone(
     }
 }
 
+double ZoomSnapPoint::DetermineMinActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue) const
+{
+    if (!previousSnapPoint)
+    {
+        return -INFINITY;
+    }
+    else
+    {
+        double previousMaxInfluence = previousSnapPoint->ImpulseInfluence(m_value, previousIgnoredValue);
+
+        if (isnan(currentIgnoredValue))
+        {
+            return previousMaxInfluence;
+        }
+        else
+        {
+            return std::max(previousMaxInfluence, m_value);
+        }
+    }
+}
+
 double ZoomSnapPoint::DetermineMaxActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* nextSnapPoint) const
 {
     // If we are not passed a nextSnapPoint it means we are the last in the list, see if we expand to Infinity or stay put.
@@ -900,6 +1300,30 @@ double ZoomSnapPoint::DetermineMaxActualApplicableZone(
     }
 }
 
+double ZoomSnapPoint::DetermineMaxActualImpulseApplicableZone(
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double nextIgnoredValue) const
+{
+    if (!nextSnapPoint)
+    {
+        return INFINITY;
+    }
+    else
+    {
+        double nextMinInfluence = nextSnapPoint->ImpulseInfluence(m_value, nextIgnoredValue);
+
+        if (isnan(currentIgnoredValue))
+        {
+            return nextMinInfluence;
+        }
+        else
+        {
+            return std::min(m_value, nextMinInfluence);
+        }
+    }
+}
+
 double ZoomSnapPoint::Influence(double edgeOfMidpoint) const
 {
     double midPoint = (m_value + edgeOfMidpoint) / 2;
@@ -927,6 +1351,27 @@ double ZoomSnapPoint::Influence(double edgeOfMidpoint) const
 #endif
 }
 
+double ZoomSnapPoint::ImpulseInfluence(double edgeOfMidpoint, double ignoredValue) const
+{
+    double midPoint = (m_value + edgeOfMidpoint) / 2.0;
+
+    if (isnan(ignoredValue))
+    {
+        return midPoint;
+    }
+    else
+    {
+        if (m_value <= edgeOfMidpoint)
+        {
+            return std::min(m_value, midPoint);
+        }
+        else
+        {
+            return std::max(m_value, midPoint);
+        }
+    }
+}
+
 void ZoomSnapPoint::Combine(
     int& combinationCount,
     winrt::SnapPointBase const& snapPoint) const
@@ -949,7 +1394,14 @@ void ZoomSnapPoint::Combine(
     }
 }
 
-double ZoomSnapPoint::Evaluate(std::tuple<double, double> actualApplicableZone, double value) const
+int ZoomSnapPoint::SnapCount() const
+{
+    return 1;
+}
+
+double ZoomSnapPoint::Evaluate(
+    std::tuple<double, double> actualApplicableZone,
+    double value) const
 {
     if (value >= std::get<0>(actualApplicableZone) && value <= std::get<1>(actualApplicableZone))
     {
@@ -1031,68 +1483,129 @@ double RepeatedZoomSnapPoint::End()
 }
 
 // For zoom snap points scale == L"1.0".
+winrt::CompositionPropertySet RepeatedZoomSnapPoint::CreateSubExpressionsPropertySet(
+    winrt::InteractionTracker const& interactionTracker,
+    winrt::Compositor const& compositor,
+    winrt::hstring const& target,
+    winrt::ExpressionAnimation* subExpression1,
+    winrt::ExpressionAnimation* subExpression2)
+{
+    *subExpression1 = nullptr;
+    *subExpression2 = nullptr;
+    return nullptr;
+}
+
+// For zoom snap points scale == L"1.0".
 winrt::ExpressionAnimation RepeatedZoomSnapPoint::CreateRestingPointExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
 {
     /*
-    ((Abs(target -                             //The absolute value of the natural resting point minus
-    ((Floor((target - first) / interval)       //How many intervals the natural resting point has passed
-     * interval) + first)                      //The location of the repeated snap point just before the natural resting point
-    ) >= Abs(target -                          //If it's greater than the absolute value of the natural resting point minus
-    ((Ceil((target - first) / interval)
-     * interval) + first)                      //The location of the repeated snap point just after the natural resting point
-    )) && (((Ceil((target - first) / interval)
-     * interval) + first) <= end)              //And the location of the repeated snap point just after the natural resting point is before the end value
-    ) ? ((Ceil((target - first) / interval)    //Then return the location of the repeated snap point just after the natural resting point
-     * interval) + first)
-     : ((Floor((target - first) / interval)    //Otherwise return the location of the repeated snap point just before the natural resting point
-     * interval) + first)
+    fracTarget = (target - first) / interval                  // unsnapped value in fractional intervals from first snapping value
+    prevSnapped = ((Floor(fracTarget) * interval) + first)    // first snapped value before unsnapped value
+    nextSnapped = ((Ceil(fracTarget) * interval) + first)     // first snapped value after unsnapped value
+    effectiveEnd = (IsInertiaFromImpulse ? impulseEnd : end)  // regular or impulse upper bound of applicable zone
+
+    expression:
+     ((Abs(target - prevSnapped) >= Abs(target - nextSnapped)) && (nextSnapped <= effectiveEnd))
+     ?
+     // nextSnapped value is closer to unsnapped value and within applicable zone
+     (
+      IsInertiaFromImpulse
+      ?
+      // impulse mode
+      (
+       nextSnapped == impulseIgn
+       ?
+       // next snapped value is ignored. Pick the previous snapped value if any, else the ignored value. 
+       (impulseIgn == first ? first : impulseIgn - interval)
+       :
+       // Pick next snapped value
+       nextSnapped
+      )
+      :
+      // regular mode. Pick next snapped value
+      nextSnapped
+     )
+     :
+     // prevSnapped value is closer to unsnapped value
+     (
+      IsInertiaFromImpulse
+      ?
+      // impulse mode
+      (
+       prevSnapped == impulseIgn
+       ?
+       // previous snapped value is ignored. Pick the next snapped value if any, else the ignored value.
+       (impulseIgn + interval <= effectiveEnd ? impulseIgn + interval : impulseIgn)
+       :
+       // Pick previous snapped value
+       prevSnapped
+      )
+      :
+      // regular mode. pick previous snapped value
+      prevSnapped
+     )
     */
 
     winrt::hstring targetExpression = GetTargetExpression(target);
     winrt::hstring expression = StringUtil::FormatString(
-        L"((Abs(%1!s! - ((Floor((%1!s! - first) / itv) * itv) + first)) >= Abs(%1!s! - ((Ceil((%1!s! - first) / itv) * itv) + first))) && (((Ceil((%1!s! - first) / itv) * itv) + first) <= end)) ? ((Ceil((%1!s! - first) / itv) * itv) + first) : ((Floor((%1!s! - first) / itv) * itv) + first)",
+        L"((Abs(%1!s!-((Floor((%1!s!-first)/itv)*itv)+first))>=Abs(%1!s!-((Ceil((%1!s!-first)/itv)*itv)+first)))&&(((Ceil((%1!s!-first)/itv)*itv)+first)<=(this.Target.IsInertiaFromImpulse?impEnd:end)))?(this.Target.IsInertiaFromImpulse?(((Ceil((%1!s!-first)/itv)*itv)+first)==impulseIgn?(impulseIgn==first?first:impulseIgn-itv):((Ceil((%1!s!-first)/itv)*itv)+first)):((Ceil((%1!s!-first)/itv)*itv)+first)):(this.Target.IsInertiaFromImpulse?(((Floor((%1!s!-first)/itv)*itv)+first)==impulseIgn?(impulseIgn+itv<=(this.Target.IsInertiaFromImpulse?impEnd:end)?impulseIgn+itv:impulseIgn):((Floor((%1!s!-first)/itv)*itv)+first)):((Floor((%1!s!-first)/itv)*itv)+first))",
         targetExpression.data());
     winrt::ExpressionAnimation restingPointExpressionAnimation = compositor.CreateExpressionAnimation(expression);
 
     restingPointExpressionAnimation.SetScalarParameter(L"itv", static_cast<float>(m_interval));
     restingPointExpressionAnimation.SetScalarParameter(L"end", static_cast<float>(m_end));
+    restingPointExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
     restingPointExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
+    restingPointExpressionAnimation.SetScalarParameter(L"impulseIgn", static_cast<float>(ignoredValue));
     return restingPointExpressionAnimation;
 }
 
 // For zoom snap points scale == L"1.0".
 winrt::ExpressionAnimation RepeatedZoomSnapPoint::CreateConditionalExpression(
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
     std::tuple<double, double> actualApplicableZone,
+    std::tuple<double, double> actualImpulseApplicableZone,
     winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
 {
+    MUX_ASSERT(std::get<0>(actualApplicableZone) == m_start);
+    MUX_ASSERT(std::get<1>(actualApplicableZone) == m_end);
+
     /*
-    target >= start &&
-    target <= end &&                            //If we are within the start and end and...
-    (((((Floor((target - first) / interval)     //How many intervals the natural resting point has passed
-     * interval) + first)                       //The location of the repeated snap point just before the natural resting point
-     + applicableRange) >= target) || (         //Plus the applicable range is greater than the natural resting point or...
+    (
+     (!IsInertiaFromImpulse && target >= start && target <= end)              // If we are within the start and end in non-impulse mode
+     ||
+     (IsInertiaFromImpulse && target >= impStart && target <= impEnd)         // or we are within the impulse start and end in impulse mode
+    ) &&                                                                      // and...
+    (((((Floor((target - first) / interval)                                   // How many intervals the natural resting point has passed
+     * interval) + first)                                                     // The location of the repeated snap point just before the natural resting point
+     + appRange) >= target) || (                                              // Plus the applicable range is greater than the natural resting point or...
     ((((Ceil((target - first) / interval)
-     * interval) + first)                       //The location of the repeated snap point just after the natural resting point
-     - applicableRange) <= target)              //Minus the applicable range is less than the natural resting point.
-     && (((Ceil((target - first) / interval)    //And the snap point after the natural resting point is less than or equal to the end value
-     * interval) + first) <= end)))
+     * interval) + first)                                                     // The location of the repeated snap point just after the natural resting point
+     - appRange) <= target)                                                   // Minus the applicable range is less than the natural resting point.
+     && (((Ceil((target - first) / interval)                                  // And the snap point after the natural resting point is less than or equal to the effective end value
+     * interval) + first) <= (IsInertiaFromImpulse ? impEnd : end))))
     */
 
     winrt::hstring targetExpression = GetTargetExpression(target);
     winrt::hstring expression = StringUtil::FormatString(
-        L"%1!s! >= start && %1!s! <= end && (((((Floor((%1!s! - first) / itv) * itv) + first) + applicableRange) >= %1!s!) || (((((Ceil((%1!s! - first) / itv) * itv) + first) - applicableRange) <= %1!s!) && (((Ceil((%1!s! - first) / itv) * itv) + first) <= end)))",
+        L"(!this.Target.IsInertiaFromImpulse && %1!s! >= start && %1!s! <= end) || (this.Target.IsInertiaFromImpulse && %1!s! >= impStart && %1!s! <= impEnd) && (((((Floor((%1!s! - first) / itv) * itv) + first) + appRange) >= %1!s!) || (((((Ceil((%1!s! - first) / itv) * itv) + first) - appRange) <= %1!s!) && (((Ceil((%1!s! - first) / itv) * itv) + first) <= (this.Target.IsInertiaFromImpulse ? impEnd : end))))",
         targetExpression.data());
     winrt::ExpressionAnimation conditionExpressionAnimation = compositor.CreateExpressionAnimation(expression);
 
     conditionExpressionAnimation.SetScalarParameter(L"itv", static_cast<float>(m_interval));
     conditionExpressionAnimation.SetScalarParameter(L"start", static_cast<float>(m_start));
     conditionExpressionAnimation.SetScalarParameter(L"end", static_cast<float>(m_end));
-    conditionExpressionAnimation.SetScalarParameter(L"applicableRange", static_cast<float>(m_specifiedApplicableRange));
+    conditionExpressionAnimation.SetScalarParameter(L"impStart", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"appRange", static_cast<float>(m_specifiedApplicableRange));
     conditionExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
     return conditionExpressionAnimation;
 }
@@ -1104,13 +1617,12 @@ ScrollerSnapPointSortPredicate RepeatedZoomSnapPoint::SortPredicate()
 }
 
 std::tuple<double, double> RepeatedZoomSnapPoint::DetermineActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint,
     SnapPointBase* nextSnapPoint)
 {
     std::tuple<double, double> actualApplicableZoneReturned = std::tuple<double, double>{
-        DetermineMinActualApplicableZone(actualApplicableZone, previousSnapPoint),
-        DetermineMaxActualApplicableZone(actualApplicableZone, nextSnapPoint) };
+        DetermineMinActualApplicableZone(previousSnapPoint),
+        DetermineMaxActualApplicableZone(nextSnapPoint) };
 
     // Influence() will not have thrown if either of the adjacent snap points are also repeated snap points which have the same start and end, however this is not allowed.
     // We only need to check the nextSnapPoint because of the symmetry in the algorithm.
@@ -1123,6 +1635,24 @@ std::tuple<double, double> RepeatedZoomSnapPoint::DetermineActualApplicableZone(
     return actualApplicableZoneReturned;
 }
 
+std::tuple<double, double> RepeatedZoomSnapPoint::DetermineActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue,
+    double nextIgnoredValue)
+{
+    return std::tuple<double, double>{
+        DetermineMinActualImpulseApplicableZone(
+            previousSnapPoint,
+            currentIgnoredValue,
+            previousIgnoredValue),
+        DetermineMaxActualImpulseApplicableZone(
+            nextSnapPoint,
+            currentIgnoredValue,
+            nextIgnoredValue) };
+}
+
 double RepeatedZoomSnapPoint::DetermineFirstRepeatedSnapPointValue() const
 {
     MUX_ASSERT(m_offset >= m_start);
@@ -1131,8 +1661,15 @@ double RepeatedZoomSnapPoint::DetermineFirstRepeatedSnapPointValue() const
     return m_offset - std::floor((m_offset - m_start) / m_interval) * m_interval;
 }
 
+double RepeatedZoomSnapPoint::DetermineLastRepeatedSnapPointValue() const
+{
+    MUX_ASSERT(m_offset <= m_end);
+    MUX_ASSERT(m_interval > 0.0);
+
+    return m_offset + std::floor((m_end - m_offset) / m_interval) * m_interval;
+}
+
 double RepeatedZoomSnapPoint::DetermineMinActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* previousSnapPoint) const
 {
     // The Influence() method of repeated snap points has a check to ensure the value does not fall within its range.
@@ -1144,8 +1681,27 @@ double RepeatedZoomSnapPoint::DetermineMinActualApplicableZone(
     return m_start;
 }
 
+double RepeatedZoomSnapPoint::DetermineMinActualImpulseApplicableZone(
+    SnapPointBase* previousSnapPoint,
+    double currentIgnoredValue,
+    double previousIgnoredValue) const
+{
+    if (previousSnapPoint)
+    {
+        if (currentIgnoredValue == DetermineFirstRepeatedSnapPointValue())
+        {
+            return currentIgnoredValue;
+        }
+
+        if (!isnan(previousIgnoredValue))
+        {
+            return previousSnapPoint->ImpulseInfluence(m_start, previousIgnoredValue);
+        }
+    }
+    return m_start;
+}
+
 double RepeatedZoomSnapPoint::DetermineMaxActualApplicableZone(
-    std::tuple<double, double> actualApplicableZone,
     SnapPointBase* nextSnapPoint) const
 {
     // The Influence() method of repeated snap points has a check to ensure the value does not fall within its range.
@@ -1153,6 +1709,26 @@ double RepeatedZoomSnapPoint::DetermineMaxActualApplicableZone(
     if (nextSnapPoint)
     {
         nextSnapPoint->Influence(m_end);
+    }
+    return m_end;
+}
+
+double RepeatedZoomSnapPoint::DetermineMaxActualImpulseApplicableZone(
+    SnapPointBase* nextSnapPoint,
+    double currentIgnoredValue,
+    double nextIgnoredValue) const
+{
+    if (nextSnapPoint)
+    {
+        if (currentIgnoredValue == DetermineLastRepeatedSnapPointValue())
+        {
+            return currentIgnoredValue;
+        }
+
+        if (!isnan(nextIgnoredValue))
+        {
+            return nextSnapPoint->ImpulseInfluence(m_end, nextIgnoredValue);
+        }
     }
     return m_end;
 }
@@ -1211,7 +1787,32 @@ double RepeatedZoomSnapPoint::Influence(double edgeOfMidpoint) const
         // TODO: Provide custom error message
         throw winrt::hresult_error(E_INVALIDARG);
     }
-    return 0.0f;
+    return 0.0;
+}
+
+double RepeatedZoomSnapPoint::ImpulseInfluence(double edgeOfMidpoint, double ignoredValue) const
+{
+    if (edgeOfMidpoint <= m_start)
+    {
+        if (ignoredValue == DetermineFirstRepeatedSnapPointValue())
+        {
+            return ignoredValue;
+        }
+        return m_start;
+    }
+    else if (edgeOfMidpoint >= m_end)
+    {
+        if (ignoredValue == DetermineLastRepeatedSnapPointValue())
+        {
+            return ignoredValue;
+        }
+        return m_end;
+    }
+    else
+    {
+        MUX_ASSERT(false);
+        return 0.0;
+    }
 }
 
 void RepeatedZoomSnapPoint::Combine(
@@ -1223,7 +1824,14 @@ void RepeatedZoomSnapPoint::Combine(
     throw winrt::hresult_error(E_INVALIDARG);
 }
 
-double RepeatedZoomSnapPoint::Evaluate(std::tuple<double, double> actualApplicableZone, double value) const
+int RepeatedZoomSnapPoint::SnapCount() const
+{
+    return static_cast<int>((m_end - m_start) / m_interval);
+}
+
+double RepeatedZoomSnapPoint::Evaluate(
+    std::tuple<double, double> actualApplicableZone,
+    double value) const
 {
     if (value >= m_start && value <= m_end)
     {
