@@ -106,26 +106,11 @@ void SnapPointWrapper<T>::DetermineActualApplicableZone(
     SnapPointWrapper<T>* nextSnapPointWrapper,
     bool forImpulse)
 {
-    winrt::SnapPointBase winrtSnapPoint = safe_cast<winrt::SnapPointBase>(m_snapPoint);
-    SnapPointBase* snapPoint = winrt::get_self<SnapPointBase>(winrtSnapPoint);
-    SnapPointBase* previousSnapPoint = nullptr;
-    SnapPointBase* nextSnapPoint = nullptr;
-    double previousIgnoredValue = NAN;
-    double nextIgnoredValue = NAN;
-
-    if (previousSnapPointWrapper)
-    {
-        winrt::SnapPointBase winrtPreviousSnapPoint = safe_cast<winrt::SnapPointBase>(previousSnapPointWrapper->SnapPoint());
-        previousSnapPoint = winrt::get_self<SnapPointBase>(winrtPreviousSnapPoint);
-        previousIgnoredValue = previousSnapPointWrapper->m_ignoredValue;
-    }
-
-    if (nextSnapPointWrapper)
-    {
-        winrt::SnapPointBase winrtNextSnapPoint = safe_cast<winrt::SnapPointBase>(nextSnapPointWrapper->SnapPoint());
-        nextSnapPoint = winrt::get_self<SnapPointBase>(winrtNextSnapPoint);
-        nextIgnoredValue = nextSnapPointWrapper->m_ignoredValue;
-    }
+    SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
+    SnapPointBase* previousSnapPoint = GetSnapPointFromWrapper(previousSnapPointWrapper);
+    SnapPointBase* nextSnapPoint = GetSnapPointFromWrapper(nextSnapPointWrapper);
+    double previousIgnoredValue = previousSnapPointWrapper ? previousSnapPointWrapper->m_ignoredValue : NAN;
+    double nextIgnoredValue = nextSnapPointWrapper ? nextSnapPointWrapper->m_ignoredValue : NAN;
 
     if (!forImpulse)
     {
@@ -167,6 +152,17 @@ bool SnapPointWrapper<T>::SnapsAt(double value) const
     SnapPointBase* snapPoint = winrt::get_self<SnapPointBase>(winrtSnapPoint);
 
     return snapPoint->SnapsAt(m_actualApplicableZone, value);
+}
+
+template<typename T>
+SnapPointBase* SnapPointWrapper<T>::GetSnapPointFromWrapper(SnapPointWrapper<T>* snapPointWrapper)
+{
+    if (snapPointWrapper)
+    {
+        winrt::SnapPointBase winrtPreviousSnapPoint = safe_cast<winrt::SnapPointBase>(snapPointWrapper->SnapPoint());
+        return winrt::get_self<SnapPointBase>(winrtPreviousSnapPoint);
+    }
+    return nullptr;
 }
 
 template SnapPointWrapper<winrt::ScrollSnapPointBase>::SnapPointWrapper(winrt::ScrollSnapPointBase const& snapPoint);
