@@ -42,6 +42,9 @@ public:
     bool SnapsAt(double value) const;
 
 private:
+	static SnapPointBase* GetSnapPointFromWrapper(SnapPointWrapper<T>* snapPointWrapper);
+
+private:
     T m_snapPoint;
     std::tuple<double, double> m_actualApplicableZone{ -INFINITY, INFINITY };
     std::tuple<double, double> m_actualImpulseApplicableZone{ -INFINITY, INFINITY };

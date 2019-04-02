@@ -14,9 +14,9 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)ItemsRepeater.idl" />
-    <None Include="$(MSBuildThisFileDirectory)RepeaterAutomationPeer.idl" />
-    <None Include="$(MSBuildThisFileDirectory)RepeaterPrivate.idl" />
+    <Midl Include="$(MSBuildThisFileDirectory)ItemsRepeater.idl" />
+    <Midl Include="$(MSBuildThisFileDirectory)RepeaterAutomationPeer.idl" />
+    <Midl Include="$(MSBuildThisFileDirectory)RepeaterPrivate.idl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationManager.h" />
@@ -59,7 +59,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SelectionTreeHelper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)StackLayout.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)StackLayoutState.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)ScrollAnchorProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ItemsRepeaterScrollHost.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)InspectingDataSource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RecyclingElementFactory.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IFlowLayoutAlgorithmDelegates.h" />
@@ -98,7 +98,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ItemsRepeaterElementIndexChangedEventArgs.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ItemsRepeaterElementPreparedEventArgs.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ItemsSourceViewFactory.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)ScrollAnchorProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ItemsRepeaterScrollHost.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ElementManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ItemTemplateWrapper.cpp" Condition="$(BuildingWithBuildExe) != 'true'" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LayoutContextAdapter.cpp" />

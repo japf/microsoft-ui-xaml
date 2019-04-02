@@ -305,7 +305,7 @@ double ScrollSnapPoint::DetermineMinActualApplicableZone(
             return previousMaxInfluence;
         default:
             MUX_ASSERT(false);
-            return 0.0f;
+            return 0.0;
         }
 #else
         return previousMaxInfluence;
@@ -370,7 +370,7 @@ double ScrollSnapPoint::DetermineMaxActualApplicableZone(
             return nextMinInfluence;
         default:
             MUX_ASSERT(false);
-            return 0.0f;
+            return 0.0;
         }
 #else
         return nextMinInfluence;
@@ -423,7 +423,7 @@ double ScrollSnapPoint::Influence(double edgeOfMidpoint) const
         return midPoint;
     default:
         MUX_ASSERT(false);
-        return 0.0f;
+        return 0.0;
     }
 #else
     return midPoint;
@@ -1227,7 +1227,7 @@ double ZoomSnapPoint::DetermineMinActualApplicableZone(
             return previousMaxInfluence;
         default:
             MUX_ASSERT(false);
-            return 0.0f;
+            return 0.0;
         }
 #else
         return previousMaxInfluence;
@@ -1292,7 +1292,7 @@ double ZoomSnapPoint::DetermineMaxActualApplicableZone(
             return nextMinInfluence;
         default:
             MUX_ASSERT(false);
-            return 0.0f;
+            return 0.0;
         }
 #else
         return nextMinInfluence;
@@ -1344,7 +1344,7 @@ double ZoomSnapPoint::Influence(double edgeOfMidpoint) const
         return midPoint;
     default:
         MUX_ASSERT(false);
-        return 0.0f;
+        return 0.0;
     }
 #else
     return midPoint;
