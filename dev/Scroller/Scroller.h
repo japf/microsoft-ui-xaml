@@ -305,7 +305,7 @@ private:
         ScrollerDimension dimension);
     template <typename T> void FixSnapPointRanges(
         std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
-        bool forImpulse);
+        bool forImpulseOnly);
     void SetupInteractionTrackerBoundaries();
     void SetupInteractionTrackerZoomFactorBoundaries(
         double minZoomFactor, double maxZoomFactor);
@@ -376,6 +376,8 @@ private:
         double unzoomedExtentWidth, double unzoomedExtentHeight,
         double viewportWidth, double viewportHeight);
     void UpdateScrollAutomationPatternProperties();
+    void UpdateScrollSnapPointsIgnoredValue(ScrollerDimension dimension);
+    void UpdateZoomSnapPointsIgnoredValue();
     void UpdateOffset(ScrollerDimension dimension, double zoomedOffset);
     void UpdateScrollControllerInteractionsAllowed(ScrollerDimension dimension);
     void UpdateScrollControllerValues(ScrollerDimension dimension);

@@ -171,12 +171,8 @@ double ScrollSnapPoint::Value()
 winrt::CompositionPropertySet ScrollSnapPoint::CreateSubExpressionsPropertySet(
     winrt::InteractionTracker const& interactionTracker,
     winrt::Compositor const& compositor,
-    winrt::hstring const& target,
-    winrt::ExpressionAnimation* subExpression1,
-    winrt::ExpressionAnimation* subExpression2)
+    winrt::hstring const& target)
 {
-    *subExpression1 = nullptr;
-    *subExpression2 = nullptr;
     return nullptr;
 }
 
@@ -230,6 +226,23 @@ winrt::ExpressionAnimation ScrollSnapPoint::CreateConditionalExpression(
     conditionExpressionAnimation.SetScalarParameter(L"minImpulseApplicableValue", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
     conditionExpressionAnimation.SetScalarParameter(L"maxImpulseApplicableValue", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
     return conditionExpressionAnimation;
+}
+
+winrt::ExpressionAnimation ScrollSnapPoint::UpdateConditionalExpressionAnimation(
+    winrt::ExpressionAnimation conditionExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    return nullptr;
+}
+
+winrt::ExpressionAnimation ScrollSnapPoint::UpdateRestingPointExpressionAnimation(
+    winrt::ExpressionAnimation restingValueExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    return nullptr;
 }
 
 ScrollerSnapPointSortPredicate ScrollSnapPoint::SortPredicate()
@@ -569,9 +582,7 @@ double RepeatedScrollSnapPoint::End()
 winrt::CompositionPropertySet RepeatedScrollSnapPoint::CreateSubExpressionsPropertySet(
     winrt::InteractionTracker const& interactionTracker,
     winrt::Compositor const& compositor,
-    winrt::hstring const& target,
-    winrt::ExpressionAnimation* subExpression1,
-    winrt::ExpressionAnimation* subExpression2)
+    winrt::hstring const& target)
 {
     /*
     fracTarget = (target - scaledFirst) / scaledInterval                     // unsnapped value in fractional intervals from first snapping value
@@ -580,9 +591,6 @@ winrt::CompositionPropertySet RepeatedScrollSnapPoint::CreateSubExpressionsPrope
 
     // target may be equal to the current snap value and result in equal scaledPrevSnap and scaledNextSnap values.
     */
-
-    *subExpression1 = nullptr;
-    *subExpression2 = nullptr;
 
     winrt::CompositionPropertySet subExpressionsPropertySet = compositor.CreatePropertySet();
 
@@ -609,9 +617,6 @@ winrt::CompositionPropertySet RepeatedScrollSnapPoint::CreateSubExpressionsPrope
 
     subExpressionsPropertySet.StartAnimation(L"scaledPrevSnap", scaledPrevSnapExpressionAnimation);
     subExpressionsPropertySet.StartAnimation(L"scaledNextSnap", scaledNextSnapExpressionAnimation);
-
-    *subExpression1 = scaledPrevSnapExpressionAnimation;
-    *subExpression2 = scaledNextSnapExpressionAnimation;
 
     return subExpressionsPropertySet;
 }
@@ -780,6 +785,51 @@ winrt::ExpressionAnimation RepeatedScrollSnapPoint::CreateConditionalExpression(
     conditionExpressionAnimation.SetScalarParameter(L"appRange", static_cast<float>(m_specifiedApplicableRange));
     conditionExpressionAnimation.SetReferenceParameter(L"subPS", subExpressionsPropertySet);
     return conditionExpressionAnimation;
+}
+
+winrt::ExpressionAnimation RepeatedScrollSnapPoint::UpdateConditionalExpressionAnimation(
+    winrt::ExpressionAnimation conditionExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    //winrt::ExpressionAnimation conditionalExpressionAnimation =
+    //    conditionExpressionAnimation.Compositor().CreateExpressionAnimation(conditionExpressionAnimation.Expression());
+
+    //conditionalExpressionAnimation.SetScalarParameter(L"start", static_cast<float>(ActualStart()));
+    //conditionalExpressionAnimation.SetScalarParameter(L"end", static_cast<float>(ActualEnd()));
+    //conditionalExpressionAnimation.SetScalarParameter(L"impStart", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
+    //conditionalExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
+    //conditionalExpressionAnimation.SetScalarParameter(L"appRange", static_cast<float>(m_specifiedApplicableRange));
+    //conditionalExpressionAnimation.SetReferenceParameter(L"subPS", subExpressionsPropertySet);
+    //return conditionalExpressionAnimation;
+
+    conditionExpressionAnimation.SetScalarParameter(L"impStart", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
+    conditionExpressionAnimation.SetReferenceParameter(L"subPS", subExpressionsPropertySet);
+    return conditionExpressionAnimation;
+}
+
+winrt::ExpressionAnimation RepeatedScrollSnapPoint::UpdateRestingPointExpressionAnimation(
+    winrt::ExpressionAnimation restingValueExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    //winrt::ExpressionAnimation restingPointExpressionAnimation =
+    //    restingValueExpressionAnimation.Compositor().CreateExpressionAnimation(restingValueExpressionAnimation.Expression());
+
+    //restingPointExpressionAnimation.SetScalarParameter(L"itv", static_cast<float>(m_interval));
+    //restingPointExpressionAnimation.SetScalarParameter(L"end", static_cast<float>(ActualEnd()));
+    //restingPointExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
+    //restingPointExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
+    //restingPointExpressionAnimation.SetScalarParameter(L"impIgn", static_cast<float>(ActualImpulseIgnoredValue(ignoredValue)));
+    //restingPointExpressionAnimation.SetReferenceParameter(L"subPS", subExpressionsPropertySet);
+    //return restingPointExpressionAnimation;
+
+    restingValueExpressionAnimation.SetScalarParameter(L"impEnd", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
+    restingValueExpressionAnimation.SetScalarParameter(L"impIgn", static_cast<float>(ActualImpulseIgnoredValue(ignoredValue)));
+    restingValueExpressionAnimation.SetReferenceParameter(L"subPS", subExpressionsPropertySet);
+    return restingValueExpressionAnimation;
 }
 
 ScrollerSnapPointSortPredicate RepeatedScrollSnapPoint::SortPredicate()
@@ -1115,12 +1165,8 @@ double ZoomSnapPoint::Value()
 winrt::CompositionPropertySet ZoomSnapPoint::CreateSubExpressionsPropertySet(
     winrt::InteractionTracker const& interactionTracker,
     winrt::Compositor const& compositor,
-    winrt::hstring const& target,
-    winrt::ExpressionAnimation* subExpression1,
-    winrt::ExpressionAnimation* subExpression2)
+    winrt::hstring const& target)
 {
-    *subExpression1 = nullptr;
-    *subExpression2 = nullptr;
     return nullptr;
 }
 
@@ -1159,6 +1205,23 @@ winrt::ExpressionAnimation ZoomSnapPoint::CreateConditionalExpression(
     conditionExpressionAnimation.SetScalarParameter(L"minImpulseApplicableValue", static_cast<float>(std::get<0>(actualImpulseApplicableZone)));
     conditionExpressionAnimation.SetScalarParameter(L"maxImpulseApplicableValue", static_cast<float>(std::get<1>(actualImpulseApplicableZone)));
     return conditionExpressionAnimation;
+}
+
+winrt::ExpressionAnimation ZoomSnapPoint::UpdateConditionalExpressionAnimation(
+    winrt::ExpressionAnimation conditionExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    return nullptr;
+}
+
+winrt::ExpressionAnimation ZoomSnapPoint::UpdateRestingPointExpressionAnimation(
+    winrt::ExpressionAnimation restingValueExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    return nullptr;
 }
 
 ScrollerSnapPointSortPredicate ZoomSnapPoint::SortPredicate()
@@ -1486,12 +1549,8 @@ double RepeatedZoomSnapPoint::End()
 winrt::CompositionPropertySet RepeatedZoomSnapPoint::CreateSubExpressionsPropertySet(
     winrt::InteractionTracker const& interactionTracker,
     winrt::Compositor const& compositor,
-    winrt::hstring const& target,
-    winrt::ExpressionAnimation* subExpression1,
-    winrt::ExpressionAnimation* subExpression2)
+    winrt::hstring const& target)
 {
-    *subExpression1 = nullptr;
-    *subExpression2 = nullptr;
     return nullptr;
 }
 
@@ -1608,6 +1667,23 @@ winrt::ExpressionAnimation RepeatedZoomSnapPoint::CreateConditionalExpression(
     conditionExpressionAnimation.SetScalarParameter(L"appRange", static_cast<float>(m_specifiedApplicableRange));
     conditionExpressionAnimation.SetScalarParameter(L"first", static_cast<float>(DetermineFirstRepeatedSnapPointValue()));
     return conditionExpressionAnimation;
+}
+
+winrt::ExpressionAnimation RepeatedZoomSnapPoint::UpdateConditionalExpressionAnimation(
+    winrt::ExpressionAnimation conditionExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    return nullptr;
+}
+
+winrt::ExpressionAnimation RepeatedZoomSnapPoint::UpdateRestingPointExpressionAnimation(
+    winrt::ExpressionAnimation restingValueExpressionAnimation,
+    winrt::CompositionPropertySet const& subExpressionsPropertySet,
+    double ignoredValue,
+    std::tuple<double, double> actualImpulseApplicableZone) const
+{
+    return nullptr;
 }
 
 ScrollerSnapPointSortPredicate RepeatedZoomSnapPoint::SortPredicate()

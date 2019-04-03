@@ -19,6 +19,8 @@ public:
 #endif //_DEBUG
 
     T SnapPoint() const;
+    winrt::ExpressionAnimation ConditionalExpressionAnimation() const;
+    winrt::ExpressionAnimation RestingPointExpressionAnimation() const;
     std::tuple<double, double> ActualApplicableZone() const;
     int CombinationCount() const;
     bool ResetIgnoredValue();
@@ -33,16 +35,23 @@ public:
         winrt::Compositor const& compositor,
         winrt::hstring const& target,
         winrt::hstring const& scale);
+    void GetUpdatedExpressionAnimations(
+        winrt::InteractionTracker const& interactionTracker,
+        winrt::hstring const& target,
+        winrt::ExpressionAnimation* conditionalExpressionAnimation,
+        winrt::ExpressionAnimation* restingPointExpressionAnimation);
     void DetermineActualApplicableZone(
         SnapPointWrapper<T>* previousSnapPointWrapper,
         SnapPointWrapper<T>* nextSnapPointWrapper,
-        bool forImpulse);
+        bool forImpulseOnly);
     void Combine(SnapPointWrapper<T>* snapPointWrapper);
     double Evaluate(double value) const;
     bool SnapsAt(double value) const;
 
+    static SnapPointBase* GetSnapPointFromWrapper(std::shared_ptr<SnapPointWrapper<T>> snapPointWrapper);
+
 private:
-	static SnapPointBase* GetSnapPointFromWrapper(SnapPointWrapper<T>* snapPointWrapper);
+	static SnapPointBase* GetSnapPointFromWrapper(const SnapPointWrapper<T>* snapPointWrapper);
 
 private:
     T m_snapPoint;
@@ -51,8 +60,8 @@ private:
     int m_combinationCount{ 0 };
     double m_ignoredValue{ NAN };
     winrt::CompositionPropertySet m_subExpressionsPropertySet{ nullptr };
-    winrt::ExpressionAnimation m_subExpression1{ nullptr };
-    winrt::ExpressionAnimation m_subExpression2{ nullptr };
+    winrt::ExpressionAnimation m_conditionExpressionAnimation{ nullptr };
+    winrt::ExpressionAnimation m_restingValueExpressionAnimation{ nullptr };
 };
 
 template <typename T>

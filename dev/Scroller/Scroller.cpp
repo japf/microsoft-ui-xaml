@@ -965,39 +965,49 @@ void Scroller::IdleStateEntered(
     }
 
     // Check if resting position corresponds to a non-unique mandatory snap point, for the three dimensions
+    UpdateScrollSnapPointsIgnoredValue(ScrollerDimension::HorizontalScroll);
+    UpdateScrollSnapPointsIgnoredValue(ScrollerDimension::VerticalScroll);
+    UpdateZoomSnapPointsIgnoredValue();
+}
 
-    for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : m_sortedConsolidatedHorizontalSnapPoints)
+void Scroller::UpdateScrollSnapPointsIgnoredValue(
+    ScrollerDimension dimension)
+{
+    std::set<std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>>, SnapPointWrapperComparator<winrt::ScrollSnapPointBase>> snapPointsSet;
+    double newIgnoredValue = 0.0;
+
+    switch (dimension)
     {
-        if (snapPointWrapper->ResetIgnoredValue())
-        {
-            break;
-        }
+    case ScrollerDimension::VerticalScroll:
+        snapPointsSet = m_sortedConsolidatedVerticalSnapPoints;
+        newIgnoredValue = m_zoomedVerticalOffset / m_zoomFactor;
+        break;
+    case ScrollerDimension::HorizontalScroll:
+        snapPointsSet = m_sortedConsolidatedHorizontalSnapPoints;
+        newIgnoredValue = m_zoomedHorizontalOffset / m_zoomFactor;
+        break;
+    default:
+        MUX_ASSERT(false);
     }
 
-    for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : m_sortedConsolidatedVerticalSnapPoints)
-    {
-        if (snapPointWrapper->ResetIgnoredValue())
-        {
-            break;
-        }
-    }
+    bool oldIgnoredValueReset = false;
 
-    for (std::shared_ptr<SnapPointWrapper<winrt::ZoomSnapPointBase>> snapPointWrapper : m_sortedConsolidatedZoomSnapPoints)
+    for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : snapPointsSet)
     {
         if (snapPointWrapper->ResetIgnoredValue())
         {
+            oldIgnoredValueReset = true;
             break;
         }
     }
 
     int snapCount = 0;
 
-    for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : m_sortedConsolidatedHorizontalSnapPoints)
+    for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : snapPointsSet)
     {
-        winrt::ScrollSnapPointBase winrtScrollSnapPoint = safe_cast<winrt::ScrollSnapPointBase>(snapPointWrapper->SnapPoint());
-        ScrollSnapPointBase* scrollSnapPoint = winrt::get_self<ScrollSnapPointBase>(winrtScrollSnapPoint);
+        SnapPointBase* snapPoint = SnapPointWrapper<winrt::ScrollSnapPointBase>::GetSnapPointFromWrapper(snapPointWrapper);
 
-        snapCount += scrollSnapPoint->SnapCount();
+        snapCount += snapPoint->SnapCount();
 
         if (snapCount > 1)
         {
@@ -1005,63 +1015,87 @@ void Scroller::IdleStateEntered(
         }
     }
 
+    bool newIgnoredValueSet = false;
+
     if (snapCount > 1)
     {
-        double horizontalOffset = m_zoomedHorizontalOffset / m_zoomFactor;
-
-        for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : m_sortedConsolidatedHorizontalSnapPoints)
+        for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : snapPointsSet)
         {
-            if (snapPointWrapper->SnapsAt(horizontalOffset))
+            if (snapPointWrapper->SnapsAt(newIgnoredValue))
             {
-                snapPointWrapper->SetIgnoredValue(horizontalOffset);
+                snapPointWrapper->SetIgnoredValue(newIgnoredValue);
+                newIgnoredValueSet = true;
                 break;
             }
         }
     }
 
-    snapCount = 0;
-
-    for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : m_sortedConsolidatedVerticalSnapPoints)
+    if (oldIgnoredValueReset || newIgnoredValueSet)
     {
-        winrt::ScrollSnapPointBase winrtScrollSnapPoint = safe_cast<winrt::ScrollSnapPointBase>(snapPointWrapper->SnapPoint());
-        ScrollSnapPointBase* scrollSnapPoint = winrt::get_self<ScrollSnapPointBase>(winrtScrollSnapPoint);
+        //SetupSnapPoints(&snapPointsSet, dimension);
 
-        snapCount += scrollSnapPoint->SnapCount();
+        FixSnapPointRanges(&snapPointsSet, true /*forImpulseOnly*/);
 
-        if (snapCount > 1)
+        winrt::Compositor compositor = m_interactionTracker.Compositor();
+        winrt::IVector<winrt::InteractionTrackerInertiaModifier> modifiers = winrt::make<Vector<winrt::InteractionTrackerInertiaModifier>>();
+
+        for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : snapPointsSet)
         {
-            break;
+            winrt::InteractionTrackerInertiaRestingValue modifier = winrt::InteractionTrackerInertiaRestingValue::Create(compositor);
+            winrt::ExpressionAnimation conditionExpressionAnimation = nullptr; // snapPointWrapper->ConditionalExpressionAnimation();
+            winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr; // snapPointWrapper->RestingPointExpressionAnimation();
+
+            snapPointWrapper->GetUpdatedExpressionAnimations(
+                m_interactionTracker,
+                dimension == ScrollerDimension::HorizontalScroll ? L"NaturalRestingPosition.x" : L"NaturalRestingPosition.y" /*target*/,
+                &conditionExpressionAnimation,
+                &restingValueExpressionAnimation);
+
+            modifier.Condition(conditionExpressionAnimation);
+            modifier.RestingValue(restingValueExpressionAnimation);
+
+            modifiers.Append(modifier);
+        }
+
+        if (dimension == ScrollerDimension::HorizontalScroll)
+        {
+            m_interactionTracker.ConfigurePositionXInertiaModifiers(modifiers);
+        }
+        else
+        {
+            m_interactionTracker.ConfigurePositionYInertiaModifiers(modifiers);
         }
     }
+}
 
-    if (snapCount > 1)
-    {
-        double verticalOffset = m_zoomedVerticalOffset / m_zoomFactor;
-
-        for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : m_sortedConsolidatedVerticalSnapPoints)
-        {
-            if (snapPointWrapper->SnapsAt(verticalOffset))
-            {
-                snapPointWrapper->SetIgnoredValue(verticalOffset);
-                break;
-            }
-        }
-    }
-
-    snapCount = 0;
+void Scroller::UpdateZoomSnapPointsIgnoredValue()
+{
+    bool oldIgnoredValueReset = false;
 
     for (std::shared_ptr<SnapPointWrapper<winrt::ZoomSnapPointBase>> snapPointWrapper : m_sortedConsolidatedZoomSnapPoints)
     {
-        winrt::ZoomSnapPointBase winrtScrollSnapPoint = safe_cast<winrt::ZoomSnapPointBase>(snapPointWrapper->SnapPoint());
-        ZoomSnapPointBase* scrollSnapPoint = winrt::get_self<ZoomSnapPointBase>(winrtScrollSnapPoint);
+        if (snapPointWrapper->ResetIgnoredValue())
+        {
+            oldIgnoredValueReset = true;
+            break;
+        }
+    }
 
-        snapCount += scrollSnapPoint->SnapCount();
+    int snapCount = 0;
+
+    for (std::shared_ptr<SnapPointWrapper<winrt::ZoomSnapPointBase>> snapPointWrapper : m_sortedConsolidatedZoomSnapPoints)
+    {
+        SnapPointBase* snapPoint = SnapPointWrapper<winrt::ZoomSnapPointBase>::GetSnapPointFromWrapper(snapPointWrapper);
+
+        snapCount += snapPoint->SnapCount();
 
         if (snapCount > 1)
         {
             break;
         }
     }
+
+    bool newIgnoredValueSet = false;
 
     if (snapCount > 1)
     {
@@ -1070,14 +1104,41 @@ void Scroller::IdleStateEntered(
             if (snapPointWrapper->SnapsAt(m_zoomFactor))
             {
                 snapPointWrapper->SetIgnoredValue(m_zoomFactor);
+                newIgnoredValueSet = true;
                 break;
             }
         }
     }
 
-    SetupSnapPoints(&m_sortedConsolidatedHorizontalSnapPoints, ScrollerDimension::HorizontalScroll);
-    SetupSnapPoints(&m_sortedConsolidatedVerticalSnapPoints, ScrollerDimension::VerticalScroll);
-    SetupSnapPoints(&m_sortedConsolidatedZoomSnapPoints, ScrollerDimension::ZoomFactor);
+    if (oldIgnoredValueReset || newIgnoredValueSet)
+    {
+        //SetupSnapPoints(&m_sortedConsolidatedZoomSnapPoints, ScrollerDimension::ZoomFactor);
+
+        FixSnapPointRanges(&m_sortedConsolidatedZoomSnapPoints, true /*forImpulseOnly*/);
+
+        winrt::Compositor compositor = m_interactionTracker.Compositor();
+        winrt::IVector<winrt::InteractionTrackerInertiaModifier> modifiers = winrt::make<Vector<winrt::InteractionTrackerInertiaModifier>>();
+
+        for (std::shared_ptr<SnapPointWrapper<winrt::ZoomSnapPointBase>> snapPointWrapper : m_sortedConsolidatedZoomSnapPoints)
+        {
+            winrt::InteractionTrackerInertiaRestingValue modifier = winrt::InteractionTrackerInertiaRestingValue::Create(compositor);
+            winrt::ExpressionAnimation conditionExpressionAnimation = nullptr; // snapPointWrapper->ConditionalExpressionAnimation();
+            winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr; // snapPointWrapper->RestingPointExpressionAnimation();
+
+            snapPointWrapper->GetUpdatedExpressionAnimations(
+                m_interactionTracker,
+                L"NaturalRestingScale" /*target*/,
+                &conditionExpressionAnimation,
+                &restingValueExpressionAnimation);
+
+            modifier.Condition(conditionExpressionAnimation);
+            modifier.RestingValue(restingValueExpressionAnimation);
+
+            modifiers.Append(modifier);
+        }
+
+        m_interactionTracker.ConfigureScaleInertiaModifiers(modifiers);
+    }
 }
 
 void Scroller::InertiaStateEntered(
@@ -1938,7 +1999,7 @@ void Scroller::SetupSnapPoints(
     MUX_ASSERT(!SharedHelpers::IsTH2OrLower());
     MUX_ASSERT(snapPointsSet);
 
-    FixSnapPointRanges(snapPointsSet, false /*forImpulse*/);
+    FixSnapPointRanges(snapPointsSet, false /*forImpulseOnly*/);
 
     if (!m_interactionTracker)
     {
@@ -2030,7 +2091,7 @@ void Scroller::SetupSnapPoints(
 template <typename T>
 void Scroller::FixSnapPointRanges(
     std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
-    bool forImpulse)
+    bool forImpulseOnly)
 {
     MUX_ASSERT(snapPointsSet);
 
@@ -2046,42 +2107,19 @@ void Scroller::FixSnapPointRanges(
 
         if (currentSnapPointWrapper)
         {
-            SnapPointBase* previousSnapPoint = nullptr;
-            SnapPointBase* nextSnapPoint = nullptr;
-
-            if (previousSnapPointWrapper)
-            {
-                winrt::SnapPointBase winrtPreviousSnapPoint = safe_cast<winrt::SnapPointBase>(previousSnapPointWrapper->SnapPoint());
-                previousSnapPoint = winrt::get_self<SnapPointBase>(winrtPreviousSnapPoint);
-            }
-
-            if (nextSnapPointWrapper)
-            {
-                winrt::SnapPointBase winrtNextSnapPoint = safe_cast<winrt::SnapPointBase>(nextSnapPointWrapper->SnapPoint());
-                nextSnapPoint = winrt::get_self<SnapPointBase>(winrtNextSnapPoint);
-            }
-
             currentSnapPointWrapper->DetermineActualApplicableZone(
                 previousSnapPointWrapper ? previousSnapPointWrapper.get() : nullptr,
                 nextSnapPointWrapper ? nextSnapPointWrapper.get() : nullptr,
-                forImpulse);
+                forImpulseOnly);
         }
     }
 
     if (nextSnapPointWrapper)
     {
-        SnapPointBase* currentSnapPoint = nullptr;
-
-        if (currentSnapPointWrapper)
-        {
-            winrt::SnapPointBase winrtCurrentSnapPoint = safe_cast<winrt::SnapPointBase>(currentSnapPointWrapper->SnapPoint());
-            currentSnapPoint = winrt::get_self<SnapPointBase>(winrtCurrentSnapPoint);
-        }
-
         nextSnapPointWrapper->DetermineActualApplicableZone(
             currentSnapPointWrapper ? currentSnapPointWrapper.get() : nullptr,
             nullptr,
-            forImpulse);
+            forImpulseOnly);
     }
 }
 
