@@ -130,6 +130,7 @@
                 <Button x:Name="FlyoutTarget4" Content="Show max-width CommandBarFlyout" Margin="10" Click="OnFlyoutTarget4Click" />
                 <Button x:Name="FlyoutTarget5" Content="Show CommandBarFlyout with sub-menu" Margin="10" Click="OnFlyoutTarget5Click" />
                 <Button x:Name="FlyoutTarget6" Content="Show CommandBarFlyout with no primary commands" Margin="10" Click="OnFlyoutTarget6Click" />
+                <CheckBox x:Name="ChkRTL" Content="Is Page in RightToLeft FlowDirection?" Margin="10" Checked="ChkRTL_Checked" Unchecked="ChkRTL_Unchecked" />
             </StackPanel>
         </ScrollViewer>
         <StackPanel Grid.Row="1">

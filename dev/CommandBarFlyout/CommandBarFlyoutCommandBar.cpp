@@ -5,6 +5,7 @@
 #include "common.h"
 #include "CommandBarFlyoutCommandBar.h"
 #include "CommandBarFlyoutCommandBarTemplateSettings.h"
+#include "TypeLogging.h"
 
 CommandBarFlyoutCommandBar::CommandBarFlyoutCommandBar()
 {
@@ -65,6 +66,10 @@ CommandBarFlyoutCommandBar::CommandBarFlyoutCommandBar()
             UpdateUI();
         }
     });
+
+    RegisterPropertyChangedCallback(
+        winrt::FrameworkElement::FlowDirectionProperty(),
+        { this, &CommandBarFlyoutCommandBar::OnFlowDirectionPropertyChanged });
 }
 
 CommandBarFlyoutCommandBar::~CommandBarFlyoutCommandBar()
@@ -88,6 +93,23 @@ void CommandBarFlyoutCommandBar::OnApplyTemplate()
     AttachEventHandlers();
     UpdateFlowsFromAndFlowsTo();
     UpdateUI(false /* useTransitions */);
+}
+
+void CommandBarFlyoutCommandBar::OnFlowDirectionPropertyChanged(
+    winrt::DependencyObject const& sender,
+    winrt::DependencyProperty const& args)
+{
+    COMMANDBARFLYOUT_TRACE_INFO(*this, TRACE_MSG_METH, METH_NAME, this);
+
+    if (m_flowDirectionWasReversed && m_primaryItemsRoot)
+    {
+        winrt::FrameworkElement senderAsFrameworkElement = sender.try_as<winrt::FrameworkElement>();
+
+        if (senderAsFrameworkElement)
+        {
+            m_primaryItemsRoot.get().FlowDirection(senderAsFrameworkElement.FlowDirection());
+        }
+    }
 }
 
 void CommandBarFlyoutCommandBar::SetOwningFlyout(winrt::CommandBarFlyout const& owningFlyout)
@@ -473,6 +495,34 @@ void CommandBarFlyoutCommandBar::UpdateTemplateSettings()
             flyoutTemplateSettings->ExpandDownOverflowVerticalPosition(0);
         }
     }
+}
+
+void CommandBarFlyoutCommandBar::OnKeyDown(winrt::KeyRoutedEventArgs const& eventArgs)
+{
+    COMMANDBARFLYOUT_TRACE_INFO(*this, TRACE_MSG_METH_STR, METH_NAME, this,
+        TypeLogging::KeyRoutedEventArgsToString(eventArgs).c_str());
+
+    if (m_primaryItemsRoot && m_primaryItemsRoot.get().FlowDirection() == winrt::FlowDirection::RightToLeft)
+    {
+        switch (eventArgs.Key())
+        {
+            case winrt::VirtualKey::Left:
+            case winrt::VirtualKey::Right:
+            {
+                auto scopeGuard = gsl::finally([this]()
+                {
+                    m_primaryItemsRoot.get().FlowDirection(winrt::FlowDirection::RightToLeft);
+                });
+
+                m_primaryItemsRoot.get().FlowDirection(winrt::FlowDirection::LeftToRight);
+                m_flowDirectionWasReversed = true;
+                __super::OnKeyDown(eventArgs);
+                return;
+            }
+        }
+    }
+
+    __super::OnKeyDown(eventArgs);
 }
 
 #ifdef USE_INSIDER_SDK

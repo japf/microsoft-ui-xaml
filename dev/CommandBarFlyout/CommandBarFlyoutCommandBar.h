@@ -5,6 +5,7 @@
 
 #include "CommandBarFlyoutCommandBar.g.h"
 #include "CommandBarFlyoutCommandBar.properties.h"
+#include "CommandBarFlyoutTrace.h"
 
 class CommandBarFlyoutCommandBar :
     public ReferenceTracker<CommandBarFlyoutCommandBar, winrt::implementation::CommandBarFlyoutCommandBarT>,
@@ -28,6 +29,9 @@ public:
     void ClearShadow();
 #endif
 
+    // IControlOverrides / IControlOverridesHelper
+    void OnKeyDown(winrt::KeyRoutedEventArgs const& eventArgs);
+
 private:
     void AttachEventHandlers();
     void DetachEventHandlers(bool useSafeGet = false);
@@ -36,6 +40,8 @@ private:
     void UpdateUI(bool useTransitions = true);
     void UpdateVisualState(bool useTransitions);
     void UpdateTemplateSettings();
+
+    void OnFlowDirectionPropertyChanged(winrt::DependencyObject const& sender, winrt::DependencyProperty const& args);
 
 #ifdef USE_INSIDER_SDK
     void AddShadow();
@@ -64,4 +70,5 @@ private:
     winrt::Storyboard::Completed_revoker m_closingStoryboardCompletedCallbackRevoker{};
 
     bool m_secondaryItemsRootSized{ false };
+    bool m_flowDirectionWasReversed{ false };
 };
