@@ -41,7 +41,10 @@ private:
     void UpdateVisualState(bool useTransitions);
     void UpdateTemplateSettings();
 
-    void OnFlowDirectionPropertyChanged(winrt::DependencyObject const& sender, winrt::DependencyProperty const& args);
+    static bool IsControlFocusable(winrt::Control const& control);
+    static bool HasTabStopCommand(winrt::IObservableVector<winrt::ICommandBarElement> const& commands);
+    static bool FocusCommand(winrt::IObservableVector<winrt::ICommandBarElement> const& commands, bool firstCommand);
+    static void EnsureTabStopUnicity(winrt::IObservableVector<winrt::ICommandBarElement> const& commands, winrt::Control const& moreButton);
 
 #ifdef USE_INSIDER_SDK
     void AddShadow();
@@ -53,7 +56,7 @@ private:
     tracker_ref<winrt::ButtonBase> m_moreButton{ this };
     weak_ref<winrt::CommandBarFlyout> m_owningFlyout{ nullptr };
     winrt::FrameworkElement::SizeChanged_revoker m_secondaryItemsRootSizeChangedRevoker{};
-    winrt::IInspectable m_keyDownHandler{ nullptr };
+    winrt::IInspectable m_previewKeyDownHandler{ nullptr };
     winrt::FrameworkElement::Loaded_revoker m_firstSecondaryItemLoadedRevoker{};
 
     // We need to manually connect the end element of the primary items to the start element of the secondary items
@@ -70,5 +73,4 @@ private:
     winrt::Storyboard::Completed_revoker m_closingStoryboardCompletedCallbackRevoker{};
 
     bool m_secondaryItemsRootSized{ false };
-    bool m_flowDirectionWasReversed{ false };
 };

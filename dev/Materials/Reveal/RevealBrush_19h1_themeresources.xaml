@@ -734,6 +734,7 @@
                                 VerticalAlignment="Top"
                                 Grid.Column="1"
                                 Control.IsTemplateKeyTipTarget="True"
+                                IsTabStop="False"
                                 IsAccessKeyScope="True"
                                 Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=CommandBarTemplateSettings.EffectiveOverflowButtonVisibility}">
                                 <FontIcon x:Name="EllipsisIcon"
