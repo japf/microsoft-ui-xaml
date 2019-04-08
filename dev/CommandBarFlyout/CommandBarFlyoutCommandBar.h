@@ -30,7 +30,7 @@ public:
 #endif
 
     // IControlOverrides / IControlOverridesHelper
-    void OnKeyDown(winrt::KeyRoutedEventArgs const& eventArgs);
+    void OnKeyDown(winrt::KeyRoutedEventArgs const& args);
 
 private:
     void AttachEventHandlers();
@@ -41,10 +41,22 @@ private:
     void UpdateVisualState(bool useTransitions);
     void UpdateTemplateSettings();
 
-    static bool IsControlFocusable(winrt::Control const& control);
-    static bool HasTabStopCommand(winrt::IObservableVector<winrt::ICommandBarElement> const& commands);
-    static bool FocusCommand(winrt::IObservableVector<winrt::ICommandBarElement> const& commands, bool firstCommand);
-    static void EnsureTabStopUnicity(winrt::IObservableVector<winrt::ICommandBarElement> const& commands, winrt::Control const& moreButton);
+    static bool IsControlFocusable(
+        winrt::Control const& control);
+    static bool HasTabStopCommand(
+        winrt::IObservableVector<winrt::ICommandBarElement> const& commands);
+    static bool FocusControl(
+        winrt::Control const& newFocus,
+        winrt::Control const& oldFocus,
+        winrt::FocusState const& focusState);
+    static bool FocusCommand(
+        winrt::IObservableVector<winrt::ICommandBarElement> const& commands,
+        winrt::Control const& moreButton,
+        winrt::FocusState const& focusState,
+        bool firstCommand);
+    static void EnsureTabStopUnicity(
+        winrt::IObservableVector<winrt::ICommandBarElement> const& commands,
+        winrt::Control const& moreButton);
 
 #ifdef USE_INSIDER_SDK
     void AddShadow();
@@ -57,7 +69,7 @@ private:
     weak_ref<winrt::CommandBarFlyout> m_owningFlyout{ nullptr };
     winrt::FrameworkElement::SizeChanged_revoker m_secondaryItemsRootSizeChangedRevoker{};
     winrt::IInspectable m_previewKeyDownHandler{ nullptr };
-    winrt::FrameworkElement::Loaded_revoker m_firstSecondaryItemLoadedRevoker{};
+    winrt::FrameworkElement::Loaded_revoker m_firstItemLoadedRevoker{};
 
     // We need to manually connect the end element of the primary items to the start element of the secondary items
     // for the purposes of UIA items navigation. To ensure that we only have the current start and end elements registered
