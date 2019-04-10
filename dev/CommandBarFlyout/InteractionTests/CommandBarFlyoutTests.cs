@@ -208,7 +208,7 @@ namespace Windows.UI.Xaml.Tests.MUXControls.InteractionTests
             {
                 Button showCommandBarFlyoutButton = FindElement.ByName<Button>("Show CommandBarFlyout");
                 ToggleButton isFlyoutOpenCheckBox = FindElement.ById<ToggleButton>("IsFlyoutOpenCheckBox");
-                
+
                 Log.Comment("Tapping on a button to show the CommandBarFlyout.");
                 InputHelper.Tap(showCommandBarFlyoutButton);
 
@@ -221,13 +221,23 @@ namespace Windows.UI.Xaml.Tests.MUXControls.InteractionTests
                 }
 
                 Log.Comment("Retrieving the more button and undo button's automation element objects.");
-                FindElement.ById("MoreButton").SetFocus();
-                Wait.ForIdle();
-                var moreButtonElement = AutomationElement.FocusedElement;
 
-                FindElement.ById("UndoButton1").SetFocus();
+                // Moving to the MoreButton to retrieve it
+                for (int i = 0; i <= 6; i++)
+                {
+                    KeyboardHelper.PressKey(Key.Right);
+                    Wait.ForIdle();
+                }
+                Button moreButton = FindElement.ById<Button>("MoreButton");
+                var moreButtonElement = AutomationElement.FocusedElement;
+                Verify.AreEqual(moreButtonElement.Current.AutomationId, moreButton.AutomationId);
+
+                // Moving to the Undo button to retrieve it
+                KeyboardHelper.PressKey(Key.Down);
                 Wait.ForIdle();
+                Button undoButton1 = FindElement.ById<Button>("UndoButton1");
                 var undoButtonElement = AutomationElement.FocusedElement;
+                Verify.AreEqual(undoButtonElement.Current.AutomationId, undoButton1.AutomationId);
 
                 Log.Comment("Verifying that the two elements point at each other using FlowsTo and FlowsFrom.");
                 var flowsToCollection = (AutomationElementCollection)moreButtonElement.GetCurrentPropertyValue(AutomationProperty.LookupById(UIA_FlowsToPropertyId));

@@ -25,28 +25,37 @@ CommandBarFlyoutCommandBar::CommandBarFlyoutCommandBar()
 
             if (commands)
             {
-                if (commands.GetAt(0).try_as<winrt::Control>().IsLoaded())
+                bool usingPrimaryCommands = commands == PrimaryCommands();
+                bool ensureTabStopUnicity = usingPrimaryCommands || SharedHelpers::IsRS3OrHigher();
+                auto firstCommandAsFrameworkElement = commands.GetAt(0).try_as<winrt::FrameworkElement>();
+
+                if (firstCommandAsFrameworkElement)
                 {
-                    FocusCommand(
-                        commands,
-                        commands == PrimaryCommands() ? m_moreButton.get() : nullptr,
-                        winrt::FocusState::Programmatic /*focusState*/,
-                        true /*firstCommand*/);
-                }
-                else
-                {
-                    m_firstItemLoadedRevoker = commands.GetAt(0).as<winrt::FrameworkElement>().Loaded(winrt::auto_revoke,
+                    if (IsFrameworkElementLoaded(firstCommandAsFrameworkElement))
                     {
-                        [this, commands](winrt::IInspectable const& sender, auto const&)
+                        FocusCommand(
+                            commands,
+                            usingPrimaryCommands ? m_moreButton.get() : nullptr /*moreButton*/,
+                            winrt::FocusState::Programmatic /*focusState*/,
+                            true /*firstCommand*/,
+                            ensureTabStopUnicity);
+                    }
+                    else
+                    {
+                        m_firstItemLoadedRevoker = firstCommandAsFrameworkElement.Loaded(winrt::auto_revoke,
                         {
-                            FocusCommand(
-                                commands,
-                                commands == PrimaryCommands() ? m_moreButton.get() : nullptr,
-                                winrt::FocusState::Programmatic /*focusState*/,
-                                true /*firstCommand*/);
-                            m_firstItemLoadedRevoker.revoke();
-                        }
-                    });
+                            [this, commands, usingPrimaryCommands, ensureTabStopUnicity](winrt::IInspectable const& sender, auto const&)
+                            {
+                                FocusCommand(
+                                    commands,
+                                    usingPrimaryCommands ? m_moreButton.get() : nullptr /*moreButton*/,
+                                    winrt::FocusState::Programmatic /*focusState*/,
+                                    true /*firstCommand*/,
+                                    ensureTabStopUnicity);
+                                m_firstItemLoadedRevoker.revoke();
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -67,6 +76,13 @@ CommandBarFlyoutCommandBar::CommandBarFlyoutCommandBar()
             COMMANDBARFLYOUT_TRACE_VERBOSE(*this, TRACE_MSG_METH, METH_NAME, this);
 
             m_secondaryItemsRootSized = false;
+
+            if (!SharedHelpers::IsRS3OrHigher() && PrimaryCommands().Size() > 0)
+            {
+                // Before RS3, ensure the focus goes to a primary command when
+                // the secondary commands are closed.
+                EnsureFocusedPrimaryCommand();
+            }
         }
     });
 
@@ -148,82 +164,25 @@ void CommandBarFlyoutCommandBar::AttachEventHandlers()
 {
     COMMANDBARFLYOUT_TRACE_INFO(*this, TRACE_MSG_METH, METH_NAME, this);
 
-    m_previewKeyDownHandler = winrt::box_value<winrt::KeyEventHandler>(
+    if (!SharedHelpers::IsRS3OrHigher())
     {
-        [this](auto const&, winrt::KeyRoutedEventArgs const& args)
+        // Prior to RS3, UIElement.PreviewKeyDown is not available. Thus IsTabStop
+        // for SecondaryCommands is left to True and the KeyDown event is used to
+        // close the whole flyout with the escape key.
+        m_keyDownHandler = winrt::box_value<winrt::KeyEventHandler>(
         {
-            COMMANDBARFLYOUT_TRACE_INFO(*this, TRACE_MSG_METH_STR, METH_NAME, this,
-                TypeLogging::KeyRoutedEventArgsToString(args).c_str());
-
-            if (args.Handled())
+            [this](auto const&, winrt::KeyRoutedEventArgs const& args)
             {
-                return;
-            }
-
-            switch (args.Key())
-            {
-            case winrt::VirtualKey::Escape:
-            {
-                // In addition to closing the CommandBar if someone hits the escape key,
-                // we also want to close the whole flyout, as well.
                 if (auto owningFlyout = m_owningFlyout.get())
                 {
-                    owningFlyout.Hide();
-                }
-                break;
-            }
-
-            case winrt::VirtualKey::Down:
-            case winrt::VirtualKey::Up:
-            {
-                if (SecondaryCommands().Size() > 1)
-                {
-                    winrt::Control focusedControl = nullptr;
-                    int startIndex = 0;
-                    int endIndex = static_cast<int>(SecondaryCommands().Size());
-                    int deltaIndex = 1;
-                    int loopCount = 0;
-
-                    if (args.Key() == winrt::VirtualKey::Up)
+                    if (args.Key() == winrt::VirtualKey::Escape)
                     {
-                        deltaIndex = -1;
-                        startIndex = endIndex - 1;
-                        endIndex = -1;
+                        owningFlyout.Hide();
                     }
-
-                    do
-                    {
-                        // Give keyboard focus to the previous or next secondary command if possible
-                        for (int index = startIndex; index != endIndex; index += deltaIndex)
-                        {
-                            auto secondaryCommand = SecondaryCommands().GetAt(index);
-
-                            if (auto secondaryCommandAsControl = secondaryCommand.try_as<winrt::Control>())
-                            {
-                                if (secondaryCommandAsControl.FocusState() != winrt::FocusState::Unfocused)
-                                {
-                                    focusedControl = secondaryCommandAsControl;
-                                }
-                                else if (focusedControl && IsControlFocusable(secondaryCommandAsControl) && focusedControl != secondaryCommandAsControl)
-                                {
-                                    if (FocusControl(secondaryCommandAsControl /*newFocus*/, focusedControl /*oldFocus*/, winrt::FocusState::Keyboard))
-                                    {
-                                        args.Handled(true);
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                        loopCount++; // Looping again is needed when the last command has focus
-                    }
-                    while (loopCount < 2 && focusedControl && deltaIndex == 1);
                 }
-                args.Handled(true);
-                break;
             }
-            }
-        }
-    });
+        });
+    }
 
     if (auto secondaryItemsRoot = m_secondaryItemsRoot.get())
     {
@@ -236,7 +195,95 @@ void CommandBarFlyoutCommandBar::AttachEventHandlers()
             }
         });
 
-        secondaryItemsRoot.AddHandler(winrt::UIElement::PreviewKeyDownEvent(), m_previewKeyDownHandler, false);
+        if (SharedHelpers::IsRS3OrHigher())
+        {
+            m_secondaryItemsRootPreviewKeyDownRevoker = secondaryItemsRoot.PreviewKeyDown(winrt::auto_revoke,
+            {
+                [this](auto const&, winrt::KeyRoutedEventArgs const& args)
+                {
+                    COMMANDBARFLYOUT_TRACE_INFO(*this, TRACE_MSG_METH_STR, METH_NAME, this,
+                        TypeLogging::KeyRoutedEventArgsToString(args).c_str());
+
+                    if (args.Handled())
+                    {
+                        return;
+                    }
+
+                    switch (args.Key())
+                    {
+                    case winrt::VirtualKey::Escape:
+                    {
+                        // In addition to closing the CommandBar if someone hits the escape key,
+                        // we also want to close the whole flyout.
+                        if (auto owningFlyout = m_owningFlyout.get())
+                        {
+                            owningFlyout.Hide();
+                        }
+                        break;
+                    }
+
+                    case winrt::VirtualKey::Down:
+                    case winrt::VirtualKey::Up:
+                    {
+                        if (SecondaryCommands().Size() > 1)
+                        {
+                            winrt::Control focusedControl = nullptr;
+                            int startIndex = 0;
+                            int endIndex = static_cast<int>(SecondaryCommands().Size());
+                            int deltaIndex = 1;
+                            int loopCount = 0;
+
+                            if (args.Key() == winrt::VirtualKey::Up)
+                            {
+                                deltaIndex = -1;
+                                startIndex = endIndex - 1;
+                                endIndex = -1;
+                            }
+
+                            do
+                            {
+                                // Give keyboard focus to the previous or next secondary command if possible
+                                for (int index = startIndex; index != endIndex; index += deltaIndex)
+                                {
+                                    auto secondaryCommand = SecondaryCommands().GetAt(index);
+
+                                    if (auto secondaryCommandAsControl = secondaryCommand.try_as<winrt::Control>())
+                                    {
+                                        if (secondaryCommandAsControl.FocusState() != winrt::FocusState::Unfocused)
+                                        {
+                                            focusedControl = secondaryCommandAsControl;
+                                        }
+                                        else if (focusedControl && IsControlFocusable(secondaryCommandAsControl, false /*checkTabStop*/) &&
+                                                 focusedControl != secondaryCommandAsControl)
+                                        {
+                                            if (FocusControl(
+                                                    secondaryCommandAsControl /*newFocus*/,
+                                                    focusedControl /*oldFocus*/,
+                                                    winrt::FocusState::Keyboard /*focusState*/,
+                                                    true /*updateTabStop*/))
+                                            {
+                                                args.Handled(true);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+                                loopCount++; // Looping again is needed when the last command has focus
+                            }
+                            while (loopCount < 2 && focusedControl && deltaIndex == 1);
+                        }
+                        args.Handled(true);
+                        break;
+                    }
+                    }
+                }
+            });
+        }
+        else
+        {
+            // UIElement.PreviewKeyDown is not available before RS3. Skip the custom Down/Up arrows handling above.
+            secondaryItemsRoot.AddHandler(winrt::UIElement::KeyDownEvent(), m_keyDownHandler, true);
+        }
     }
 
     if (m_openingStoryboard)
@@ -263,13 +310,16 @@ void CommandBarFlyoutCommandBar::DetachEventHandlers(
 {
     COMMANDBARFLYOUT_TRACE_INFO(*this, TRACE_MSG_METH, METH_NAME, this);
 
-    if (m_previewKeyDownHandler)
+    if (m_keyDownHandler)
     {
+        MUX_ASSERT(!SharedHelpers::IsRS3OrHigher());
+
         if (auto secondaryItemsRoot = useSafeGet ? m_secondaryItemsRoot.safe_get() : m_secondaryItemsRoot.get())
         {
-            secondaryItemsRoot.RemoveHandler(winrt::UIElement::PreviewKeyDownEvent(), m_previewKeyDownHandler);
+            secondaryItemsRoot.RemoveHandler(winrt::UIElement::KeyDownEvent(), m_keyDownHandler);
         }
-        m_previewKeyDownHandler = nullptr;
+
+        m_keyDownHandler = nullptr;
     }
 }
 
@@ -321,8 +371,21 @@ void CommandBarFlyoutCommandBar::PlayCloseAnimation(
 
 void CommandBarFlyoutCommandBar::UpdateFlowsFromAndFlowsTo()
 {
-    EnsureTabStopUnicity(PrimaryCommands(), m_moreButton.get());
-    EnsureTabStopUnicity(SecondaryCommands(), nullptr);
+    auto moreButton = m_moreButton.get();
+
+    // Ensure there is only one focusable command with IsTabStop set to True
+    // to enable tabbing from primary to secondary commands and vice-versa
+    // with a single Tab keystroke.
+    EnsureTabStopUnicity(PrimaryCommands(), moreButton);
+    if (SharedHelpers::IsRS3OrHigher())
+    {
+        EnsureTabStopUnicity(SecondaryCommands(), nullptr);
+    }
+
+    // Ensure the SizeOfSet and PositionInSet automation properties
+    // for the primary commands and the MoreButton account for the
+    // potential MoreButton.
+    EnsureAutomationSetCountAndPosition();
 
     if (m_currentPrimaryItemsEndElement)
     {
@@ -340,17 +403,17 @@ void CommandBarFlyoutCommandBar::UpdateFlowsFromAndFlowsTo()
     // is when the secondary commands are showing, in which case we want to connect the primary and secondary command lists.
     if (IsOpen())
     {
-        auto isElementFocusable = [](winrt::ICommandBarElement const& element)
+        auto isElementFocusable = [](winrt::ICommandBarElement const& element, bool checkTabStop)
         {
             winrt::Control primaryCommandAsControl = element.try_as<winrt::Control>();
-            return IsControlFocusable(primaryCommandAsControl);
+            return IsControlFocusable(primaryCommandAsControl, checkTabStop);
         };
 
         auto primaryCommands = PrimaryCommands();
         for (int i = static_cast<int>(primaryCommands.Size() - 1); i >= 0; i--)
         {
             auto primaryCommand = primaryCommands.GetAt(i);
-            if (isElementFocusable(primaryCommand))
+            if (isElementFocusable(primaryCommand, false /*checkTabStop*/))
             {
                 m_currentPrimaryItemsEndElement.set(primaryCommand.try_as<winrt::FrameworkElement>());
                 break;
@@ -359,14 +422,14 @@ void CommandBarFlyoutCommandBar::UpdateFlowsFromAndFlowsTo()
 
         // If we have a more button and at least one focusable primary item, then
         // we'll use the more button as the last element in our primary items list.
-        if (m_moreButton && m_currentPrimaryItemsEndElement)
+        if (moreButton && m_currentPrimaryItemsEndElement)
         {
-            m_currentPrimaryItemsEndElement.set(m_moreButton.get());
+            m_currentPrimaryItemsEndElement.set(moreButton);
         }
 
         for (const auto& secondaryCommand : SecondaryCommands())
         {
-            if (isElementFocusable(secondaryCommand))
+            if (isElementFocusable(secondaryCommand, !SharedHelpers::IsRS3OrHigher() /*checkTabStop*/))
             {
                 m_currentSecondaryItemsStartElement.set(secondaryCommand.try_as<winrt::FrameworkElement>());
                 break;
@@ -594,6 +657,87 @@ void CommandBarFlyoutCommandBar::UpdateTemplateSettings()
     }
 }
 
+void CommandBarFlyoutCommandBar::EnsureAutomationSetCountAndPosition()
+{
+    COMMANDBARFLYOUT_TRACE_VERBOSE(*this, TRACE_MSG_METH, METH_NAME, this);
+
+    auto moreButton = m_moreButton.get();
+    int sizeOfSet = 0;
+
+    for (const auto& command : PrimaryCommands())
+    {
+        if (auto commandAsUIElement = command.try_as<winrt::UIElement>())
+        {
+            if (commandAsUIElement.Visibility() == winrt::Visibility::Visible)
+            {
+                sizeOfSet++;
+            }
+        }
+    }
+
+    if (moreButton)
+    {
+        // Accounting for the MoreButton
+        sizeOfSet++;
+    }
+
+    for (const auto& command : PrimaryCommands())
+    {
+        if (auto commandAsUIElement = command.try_as<winrt::UIElement>())
+        {
+            if (commandAsUIElement.Visibility() == winrt::Visibility::Visible)
+            {
+                winrt::AutomationProperties::SetSizeOfSet(commandAsUIElement, sizeOfSet);
+            }
+        }
+    }
+
+    if (moreButton)
+    {
+        winrt::AutomationProperties::SetSizeOfSet(moreButton, sizeOfSet);
+        winrt::AutomationProperties::SetPositionInSet(moreButton, sizeOfSet);
+    }
+}
+
+void CommandBarFlyoutCommandBar::EnsureFocusedPrimaryCommand()
+{
+    COMMANDBARFLYOUT_TRACE_VERBOSE(*this, TRACE_MSG_METH, METH_NAME, this);
+
+    MUX_ASSERT(!SharedHelpers::IsRS3OrHigher());
+
+    auto moreButton = m_moreButton.get();
+    auto tabStopControl = GetFirstTabStopControl(PrimaryCommands());
+
+    if (!tabStopControl)
+    {
+        if (moreButton && moreButton.IsTabStop())
+        {
+            tabStopControl = moreButton;
+        }
+    }
+
+    if (tabStopControl)
+    {
+        if (tabStopControl.FocusState() == winrt::FocusState::Unfocused)
+        {
+            FocusControl(
+                tabStopControl /*newFocus*/,
+                nullptr /*oldFocus*/,
+                winrt::FocusState::Programmatic /*focusState*/,
+                false /*updateTabStop*/);
+        }
+    }
+    else
+    {
+        FocusCommand(
+            PrimaryCommands() /*commands*/,
+            moreButton /*moreButton*/,
+            winrt::FocusState::Programmatic /*focusState*/,
+            true /*firstCommand*/,
+            true /*ensureTabStopUnicity*/);
+    }
+}
+
 void CommandBarFlyoutCommandBar::OnKeyDown(
     winrt::KeyRoutedEventArgs const& args)
 {
@@ -619,7 +763,8 @@ void CommandBarFlyoutCommandBar::OnKeyDown(
                 SecondaryCommands() /*commands*/,
                 nullptr /*moreButton*/,
                 winrt::FocusState::Keyboard /*focusState*/,
-                true /*firstCommand*/);
+                true /*firstCommand*/,
+                SharedHelpers::IsRS3OrHigher() /*ensureTabStopUnicity*/);
         }
         break;
     }
@@ -658,7 +803,12 @@ void CommandBarFlyoutCommandBar::OnKeyDown(
                 IsOpen(true);
             }
 
-            if (FocusCommand(SecondaryCommands() /*commands*/, moreButton, winrt::FocusState::Keyboard, true /*firstCommand*/))
+            if (FocusCommand(
+                    SecondaryCommands() /*commands*/,
+                    nullptr /*moreButton*/,
+                    winrt::FocusState::Keyboard /*focusState*/,
+                    true /*firstCommand*/,
+                    SharedHelpers::IsRS3OrHigher() /*ensureTabStopUnicity*/))
             {
                 args.Handled(true);
             }
@@ -695,8 +845,12 @@ void CommandBarFlyoutCommandBar::OnKeyDown(
                         focusedControl = primaryCommandAsControl;
                     }
                     else if (focusedControl &&
-                        IsControlFocusable(primaryCommandAsControl) &&
-                        FocusControl(primaryCommandAsControl /*newFocus*/, focusedControl /*oldFocus*/, winrt::FocusState::Keyboard))
+                        IsControlFocusable(primaryCommandAsControl, false /*checkTabStop*/) &&
+                        FocusControl(
+                            primaryCommandAsControl /*newFocus*/,
+                            focusedControl /*oldFocus*/,
+                            winrt::FocusState::Keyboard /*focusState*/,
+                            true /*updateTabStop*/))
                     {
                         args.Handled(true);
                         break;
@@ -709,10 +863,14 @@ void CommandBarFlyoutCommandBar::OnKeyDown(
                 if (isRight &&
                     focusedControl &&
                     moreButton &&
-                    IsControlFocusable(moreButton))
+                    IsControlFocusable(moreButton, false /*checkTabStop*/))
                 {
                     // When on last primary command, give keyboard focus to the MoreButton
-                    if (FocusControl(moreButton /*newFocus*/, focusedControl /*oldFocus*/, winrt::FocusState::Keyboard))
+                    if (FocusControl(
+                            moreButton /*newFocus*/,
+                            focusedControl /*oldFocus*/,
+                            winrt::FocusState::Keyboard /*focusState*/,
+                            true /*updateTabStop*/))
                     {
                         args.Handled(true);
                     }
@@ -726,7 +884,12 @@ void CommandBarFlyoutCommandBar::OnKeyDown(
                         IsOpen(true);
                     }
 
-                    if (FocusCommand(SecondaryCommands() /*commands*/, moreButton, winrt::FocusState::Keyboard, false /*firstCommand*/))
+                    if (FocusCommand(
+                            SecondaryCommands() /*commands*/,
+                            nullptr /*moreButton*/,
+                            winrt::FocusState::Keyboard /*focusState*/,
+                            false /*firstCommand*/,
+                            SharedHelpers::IsRS3OrHigher() /*ensureTabStopUnicity*/))
                     {
                         args.Handled(true);
                     }
@@ -746,15 +909,30 @@ void CommandBarFlyoutCommandBar::OnKeyDown(
     __super::OnKeyDown(args);
 }
 
+bool CommandBarFlyoutCommandBar::IsFrameworkElementLoaded(
+    winrt::FrameworkElement const& frameworkElement)
+{
+    if (SharedHelpers::IsRS5OrHigher())
+    {
+        return frameworkElement.IsLoaded();
+    }
+    else
+    {
+        return winrt::VisualTreeHelper::GetParent(frameworkElement) != nullptr;
+    }
+}
+
 bool CommandBarFlyoutCommandBar::IsControlFocusable(
-    winrt::Control const& control)
+    winrt::Control const& control,
+    bool checkTabStop)
 {
     return control &&
         control.Visibility() == winrt::Visibility::Visible &&
-        (control.IsEnabled() || control.AllowFocusWhenDisabled());
+        (control.IsEnabled() || control.AllowFocusWhenDisabled()) &&
+        (!checkTabStop || control.IsTabStop());
 }
 
-bool CommandBarFlyoutCommandBar::HasTabStopCommand(
+winrt::Control CommandBarFlyoutCommandBar::GetFirstTabStopControl(
     winrt::IObservableVector<winrt::ICommandBarElement> const& commands)
 {
     for (const auto& command : commands)
@@ -763,25 +941,29 @@ bool CommandBarFlyoutCommandBar::HasTabStopCommand(
         {
             if (commandAsControl.IsTabStop())
             {
-                return true;
+                return commandAsControl;
             }
         }
     }
-    return false;
+    return nullptr;
 }
 
 bool CommandBarFlyoutCommandBar::FocusControl(
     winrt::Control const& newFocus,
     winrt::Control const& oldFocus,
-    winrt::FocusState const& focusState)
+    winrt::FocusState const& focusState,
+    bool updateTabStop)
 {
     MUX_ASSERT(newFocus);
 
-    newFocus.IsTabStop(true);
+    if (updateTabStop)
+    {
+        newFocus.IsTabStop(true);
+    }
 
     if (newFocus.Focus(focusState))
     {
-        if (oldFocus)
+        if (oldFocus && updateTabStop)
         {
             oldFocus.IsTabStop(false);
         }
@@ -794,7 +976,8 @@ bool CommandBarFlyoutCommandBar::FocusCommand(
     winrt::IObservableVector<winrt::ICommandBarElement> const& commands,
     winrt::Control const& moreButton,
     winrt::FocusState const& focusState,
-    bool firstCommand)
+    bool firstCommand,
+    bool ensureTabStopUnicity)
 {
     COMMANDBARFLYOUT_TRACE_VERBOSE(nullptr, TRACE_MSG_METH, METH_NAME, nullptr);
 
@@ -819,18 +1002,27 @@ bool CommandBarFlyoutCommandBar::FocusCommand(
 
         if (auto commandAsControl = command.try_as<winrt::Control>())
         {
-            if (IsControlFocusable(commandAsControl))
+            if (IsControlFocusable(commandAsControl, !ensureTabStopUnicity /*checkTabStop*/))
             {
                 if (!focusedControl)
                 {
-                    if (FocusControl(commandAsControl /*newFocus*/, nullptr /*oldFocus*/, focusState))
+                    if (FocusControl(
+                            commandAsControl /*newFocus*/,
+                            nullptr /*oldFocus*/,
+                            focusState /*focusState*/,
+                            ensureTabStopUnicity /*updateTabStop*/))
                     {
-                        if (moreButton && moreButton.IsTabStop())
+                        if (ensureTabStopUnicity && moreButton && moreButton.IsTabStop())
                         {
                             moreButton.IsTabStop(false);
                         }
 
                         focusedControl = commandAsControl;
+
+                        if (!ensureTabStopUnicity)
+                        {
+                            break;
+                        }
                     }
                 }
                 else if (focusedControl && commandAsControl.IsTabStop())
@@ -854,14 +1046,14 @@ void CommandBarFlyoutCommandBar::EnsureTabStopUnicity(
 
     bool tabStopSeen = moreButton && moreButton.IsTabStop();
 
-    if (tabStopSeen || HasTabStopCommand(commands))
+    if (tabStopSeen || GetFirstTabStopControl(commands))
     {
         // Make sure only one command or the MoreButton has IsTabStop set
         for (const auto& command : commands)
         {
             if (auto commandAsControl = command.try_as<winrt::Control>())
             {
-                if (IsControlFocusable(commandAsControl) && commandAsControl.IsTabStop())
+                if (IsControlFocusable(commandAsControl, false /*checkTabStop*/) && commandAsControl.IsTabStop())
                 {
                     if (!tabStopSeen)
                     {
@@ -882,7 +1074,7 @@ void CommandBarFlyoutCommandBar::EnsureTabStopUnicity(
         {
             if (auto commandAsControl = command.try_as<winrt::Control>())
             {
-                if (IsControlFocusable(commandAsControl))
+                if (IsControlFocusable(commandAsControl, false /*checkTabStop*/))
                 {
                     commandAsControl.IsTabStop(true);
                     break;

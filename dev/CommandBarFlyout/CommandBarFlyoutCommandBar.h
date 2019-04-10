@@ -40,20 +40,27 @@ private:
     void UpdateUI(bool useTransitions = true);
     void UpdateVisualState(bool useTransitions);
     void UpdateTemplateSettings();
+    void EnsureAutomationSetCountAndPosition();
+    void EnsureFocusedPrimaryCommand();
 
+    static bool IsFrameworkElementLoaded(
+        winrt::FrameworkElement const& frameworkElement);
     static bool IsControlFocusable(
-        winrt::Control const& control);
-    static bool HasTabStopCommand(
+        winrt::Control const& control,
+        bool checkTabStop);
+    static winrt::Control GetFirstTabStopControl(
         winrt::IObservableVector<winrt::ICommandBarElement> const& commands);
     static bool FocusControl(
         winrt::Control const& newFocus,
         winrt::Control const& oldFocus,
-        winrt::FocusState const& focusState);
+        winrt::FocusState const& focusState,
+        bool updateTabStop);
     static bool FocusCommand(
         winrt::IObservableVector<winrt::ICommandBarElement> const& commands,
         winrt::Control const& moreButton,
         winrt::FocusState const& focusState,
-        bool firstCommand);
+        bool firstCommand,
+        bool ensureTabStopUnicity);
     static void EnsureTabStopUnicity(
         winrt::IObservableVector<winrt::ICommandBarElement> const& commands,
         winrt::Control const& moreButton);
@@ -67,8 +74,9 @@ private:
     tracker_ref<winrt::FrameworkElement> m_secondaryItemsRoot{ this };
     tracker_ref<winrt::ButtonBase> m_moreButton{ this };
     weak_ref<winrt::CommandBarFlyout> m_owningFlyout{ nullptr };
+    winrt::IInspectable m_keyDownHandler{ nullptr };
+    winrt::UIElement::PreviewKeyDown_revoker m_secondaryItemsRootPreviewKeyDownRevoker{};
     winrt::FrameworkElement::SizeChanged_revoker m_secondaryItemsRootSizeChangedRevoker{};
-    winrt::IInspectable m_previewKeyDownHandler{ nullptr };
     winrt::FrameworkElement::Loaded_revoker m_firstItemLoadedRevoker{};
 
     // We need to manually connect the end element of the primary items to the start element of the secondary items
