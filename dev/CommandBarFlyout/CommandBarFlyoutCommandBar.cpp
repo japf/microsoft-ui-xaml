@@ -143,6 +143,8 @@ void CommandBarFlyoutCommandBar::OnApplyTemplate()
 
     if (auto moreButton = m_moreButton.get())
     {
+        // Initially only the first focusable primary and secondary commands
+        // keep their IsTabStop set to True.
         if (moreButton.IsTabStop())
         {
             moreButton.IsTabStop(false);

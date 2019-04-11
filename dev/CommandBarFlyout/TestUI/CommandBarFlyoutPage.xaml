@@ -161,7 +161,7 @@
                 <Button x:Name="FlyoutTarget5" Content="Show CommandBarFlyout with sub-menu" Margin="10" Click="OnFlyoutTarget5Click" />
                 <Button x:Name="FlyoutTarget6" Content="Show CommandBarFlyout with no primary commands" Margin="10" Click="OnFlyoutTarget6Click" />
                 <Button x:Name="FlyoutTarget7" Content="Show CommandBarFlyout with non-focusable primary commands" Margin="10" Click="OnFlyoutTarget7Click" />
-                <CheckBox x:Name="ChkRTL" Content="Is Page in RightToLeft FlowDirection?" Margin="10" Checked="ChkRTL_Checked" Unchecked="ChkRTL_Unchecked" />
+                <CheckBox x:Name="IsRTLCheckBox" Content="Is Page in RightToLeft FlowDirection?" AutomationProperties.AutomationId="IsRTLCheckBox" Margin="10" Checked="IsRTLCheckBox_Checked" Unchecked="IsRTLCheckBox_Unchecked" />
             </StackPanel>
         </ScrollViewer>
         <StackPanel Grid.Row="1">

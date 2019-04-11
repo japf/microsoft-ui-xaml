@@ -159,12 +159,12 @@ namespace MUXControlsTestApp
             }
         }
 
-        private void ChkRTL_Checked(object sender, RoutedEventArgs e)
+        private void IsRTLCheckBox_Checked(object sender, RoutedEventArgs e)
         {
             FlowDirection = FlowDirection.RightToLeft;
         }
 
-        private void ChkRTL_Unchecked(object sender, RoutedEventArgs e)
+        private void IsRTLCheckBox_Unchecked(object sender, RoutedEventArgs e)
         {
             FlowDirection = FlowDirection.LeftToRight;
         }
