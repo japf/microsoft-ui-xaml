@@ -19,23 +19,20 @@ public:
 #endif //_DEBUG
 
     T SnapPoint() const;
-    winrt::ExpressionAnimation ConditionalExpressionAnimation() const;
-    winrt::ExpressionAnimation RestingPointExpressionAnimation() const;
     std::tuple<double, double> ActualApplicableZone() const;
     int CombinationCount() const;
     bool ResetIgnoredValue();
     void SetIgnoredValue(double ignoredValue);
 
     winrt::ExpressionAnimation CreateRestingPointExpression(
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
         winrt::InteractionTracker const& interactionTracker,
-        winrt::Compositor const& compositor,
         winrt::hstring const& target,
         winrt::hstring const& scale);
-    void GetUpdatedExpressionAnimations(
+    void GetUpdatedExpressionAnimationsForImpulse(
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::ExpressionAnimation* conditionalExpressionAnimation,
@@ -59,7 +56,6 @@ private:
     std::tuple<double, double> m_actualImpulseApplicableZone{ -INFINITY, INFINITY };
     int m_combinationCount{ 0 };
     double m_ignoredValue{ NAN };
-    winrt::CompositionPropertySet m_subExpressionsPropertySet{ nullptr };
     winrt::ExpressionAnimation m_conditionExpressionAnimation{ nullptr };
     winrt::ExpressionAnimation m_restingValueExpressionAnimation{ nullptr };
 };

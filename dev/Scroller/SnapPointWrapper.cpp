@@ -25,18 +25,6 @@ T SnapPointWrapper<T>::SnapPoint() const
 }
 
 template<typename T>
-winrt::ExpressionAnimation SnapPointWrapper<T>::ConditionalExpressionAnimation() const
-{
-    return m_conditionExpressionAnimation;
-}
-
-template<typename T>
-winrt::ExpressionAnimation SnapPointWrapper<T>::RestingPointExpressionAnimation() const
-{
-    return m_restingValueExpressionAnimation;
-}
-
-template<typename T>
 std::tuple<double, double> SnapPointWrapper<T>::ActualApplicableZone() const
 {
     return m_actualApplicableZone;
@@ -70,17 +58,16 @@ void SnapPointWrapper<T>::SetIgnoredValue(double ignoredValue)
 
 template<typename T>
 winrt::ExpressionAnimation SnapPointWrapper<T>::CreateRestingPointExpression(
-    winrt::Compositor const& compositor,
+    winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
     winrt::hstring const& scale)
 {
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
     m_restingValueExpressionAnimation = snapPoint->CreateRestingPointExpression(
-        m_subExpressionsPropertySet,
         m_ignoredValue,
         m_actualImpulseApplicableZone,
-        compositor,
+        interactionTracker,
         target,
         scale);
 
@@ -90,22 +77,15 @@ winrt::ExpressionAnimation SnapPointWrapper<T>::CreateRestingPointExpression(
 template<typename T>
 winrt::ExpressionAnimation SnapPointWrapper<T>::CreateConditionalExpression(
     winrt::InteractionTracker const& interactionTracker,
-    winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale)
 {
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
-    m_subExpressionsPropertySet = snapPoint->CreateSubExpressionsPropertySet(
-        interactionTracker,
-        compositor,
-        target);
-
     m_conditionExpressionAnimation = snapPoint->CreateConditionalExpression(
-        m_subExpressionsPropertySet,
         m_actualApplicableZone,
         m_actualImpulseApplicableZone,
-        compositor,
+        interactionTracker,
         target,
         scale);
 
@@ -113,7 +93,7 @@ winrt::ExpressionAnimation SnapPointWrapper<T>::CreateConditionalExpression(
 }
 
 template<typename T>
-void SnapPointWrapper<T>::GetUpdatedExpressionAnimations(
+void SnapPointWrapper<T>::GetUpdatedExpressionAnimationsForImpulse(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
@@ -121,18 +101,11 @@ void SnapPointWrapper<T>::GetUpdatedExpressionAnimations(
 {
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
-    m_subExpressionsPropertySet = snapPoint->CreateSubExpressionsPropertySet(
-        interactionTracker,
-        interactionTracker.Compositor(),
-        target);
-
-    /*m_conditionExpressionAnimation =*/ snapPoint->UpdateConditionalExpressionAnimation(
+    snapPoint->UpdateConditionalExpressionAnimationForImpulse(
         m_conditionExpressionAnimation,
-        m_subExpressionsPropertySet,
         m_actualImpulseApplicableZone);
-    /*m_restingValueExpressionAnimation =*/ snapPoint->UpdateRestingPointExpressionAnimation(
+    snapPoint->UpdateRestingPointExpressionAnimationForImpulse(
         m_restingValueExpressionAnimation,
-        m_subExpressionsPropertySet,
         m_ignoredValue,
         m_actualImpulseApplicableZone);
 
@@ -219,12 +192,6 @@ template SnapPointWrapper<winrt::ZoomSnapPointBase>::~SnapPointWrapper();
 template winrt::ScrollSnapPointBase SnapPointWrapper<winrt::ScrollSnapPointBase>::SnapPoint() const;
 template winrt::ZoomSnapPointBase SnapPointWrapper<winrt::ZoomSnapPointBase>::SnapPoint() const;
 
-template winrt::ExpressionAnimation SnapPointWrapper<winrt::ScrollSnapPointBase>::ConditionalExpressionAnimation() const;
-template winrt::ExpressionAnimation SnapPointWrapper<winrt::ZoomSnapPointBase>::ConditionalExpressionAnimation() const;
-
-template winrt::ExpressionAnimation SnapPointWrapper<winrt::ScrollSnapPointBase>::RestingPointExpressionAnimation() const;
-template winrt::ExpressionAnimation SnapPointWrapper<winrt::ZoomSnapPointBase>::RestingPointExpressionAnimation() const;
-
 template std::tuple<double, double> SnapPointWrapper<winrt::ScrollSnapPointBase>::ActualApplicableZone() const;
 template std::tuple<double, double> SnapPointWrapper<winrt::ZoomSnapPointBase>::ActualApplicableZone() const;
 
@@ -238,31 +205,29 @@ template void SnapPointWrapper<winrt::ScrollSnapPointBase>::SetIgnoredValue(doub
 template void SnapPointWrapper<winrt::ZoomSnapPointBase>::SetIgnoredValue(double ignoredValue);
 
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ScrollSnapPointBase>::CreateRestingPointExpression(
-    winrt::Compositor const& compositor,
+    winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
     winrt::hstring const& scale);
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ZoomSnapPointBase>::CreateRestingPointExpression(
-    winrt::Compositor const& compositor,
+    winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
     winrt::hstring const& scale);
 
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ScrollSnapPointBase>::CreateConditionalExpression(
     winrt::InteractionTracker const& interactionTracker,
-    winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale);
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ZoomSnapPointBase>::CreateConditionalExpression(
     winrt::InteractionTracker const& interactionTracker,
-    winrt::Compositor const& compositor,
     winrt::hstring const& target,
     winrt::hstring const& scale);
 
-template void SnapPointWrapper<winrt::ScrollSnapPointBase>::GetUpdatedExpressionAnimations(
+template void SnapPointWrapper<winrt::ScrollSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation);
-template void SnapPointWrapper<winrt::ZoomSnapPointBase>::GetUpdatedExpressionAnimations(
+template void SnapPointWrapper<winrt::ZoomSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,

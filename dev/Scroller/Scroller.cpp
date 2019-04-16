@@ -1032,8 +1032,6 @@ void Scroller::UpdateScrollSnapPointsIgnoredValue(
 
     if (oldIgnoredValueReset || newIgnoredValueSet)
     {
-        //SetupSnapPoints(&snapPointsSet, dimension);
-
         FixSnapPointRanges(&snapPointsSet, true /*forImpulseOnly*/);
 
         winrt::Compositor compositor = m_interactionTracker.Compositor();
@@ -1042,10 +1040,10 @@ void Scroller::UpdateScrollSnapPointsIgnoredValue(
         for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : snapPointsSet)
         {
             winrt::InteractionTrackerInertiaRestingValue modifier = winrt::InteractionTrackerInertiaRestingValue::Create(compositor);
-            winrt::ExpressionAnimation conditionExpressionAnimation = nullptr; // snapPointWrapper->ConditionalExpressionAnimation();
-            winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr; // snapPointWrapper->RestingPointExpressionAnimation();
+            winrt::ExpressionAnimation conditionExpressionAnimation = nullptr;
+            winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr;
 
-            snapPointWrapper->GetUpdatedExpressionAnimations(
+            snapPointWrapper->GetUpdatedExpressionAnimationsForImpulse(
                 m_interactionTracker,
                 dimension == ScrollerDimension::HorizontalScroll ? L"NaturalRestingPosition.x" : L"NaturalRestingPosition.y" /*target*/,
                 &conditionExpressionAnimation,
@@ -1112,8 +1110,6 @@ void Scroller::UpdateZoomSnapPointsIgnoredValue()
 
     if (oldIgnoredValueReset || newIgnoredValueSet)
     {
-        //SetupSnapPoints(&m_sortedConsolidatedZoomSnapPoints, ScrollerDimension::ZoomFactor);
-
         FixSnapPointRanges(&m_sortedConsolidatedZoomSnapPoints, true /*forImpulseOnly*/);
 
         winrt::Compositor compositor = m_interactionTracker.Compositor();
@@ -1125,7 +1121,7 @@ void Scroller::UpdateZoomSnapPointsIgnoredValue()
             winrt::ExpressionAnimation conditionExpressionAnimation = nullptr; // snapPointWrapper->ConditionalExpressionAnimation();
             winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr; // snapPointWrapper->RestingPointExpressionAnimation();
 
-            snapPointWrapper->GetUpdatedExpressionAnimations(
+            snapPointWrapper->GetUpdatedExpressionAnimationsForImpulse(
                 m_interactionTracker,
                 L"NaturalRestingScale" /*target*/,
                 &conditionExpressionAnimation,
@@ -6997,8 +6993,8 @@ winrt::InteractionTrackerInertiaRestingValue Scroller::GetInertiaRestingValue(
     winrt::hstring const& scale) const
 {
     winrt::InteractionTrackerInertiaRestingValue modifier = winrt::InteractionTrackerInertiaRestingValue::Create(compositor);
-    winrt::ExpressionAnimation conditionExpressionAnimation = snapPointWrapper->CreateConditionalExpression(m_interactionTracker, compositor, target, scale);
-    winrt::ExpressionAnimation restingPointExpressionAnimation = snapPointWrapper->CreateRestingPointExpression(compositor, target, scale);
+    winrt::ExpressionAnimation conditionExpressionAnimation = snapPointWrapper->CreateConditionalExpression(m_interactionTracker, target, scale);
+    winrt::ExpressionAnimation restingPointExpressionAnimation = snapPointWrapper->CreateRestingPointExpression(m_interactionTracker, target, scale);
 
     modifier.Condition(conditionExpressionAnimation);
     modifier.RestingValue(restingPointExpressionAnimation);

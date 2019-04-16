@@ -41,31 +41,23 @@ public:
     bool operator< (SnapPointBase* snapPoint);
     bool operator== (SnapPointBase* snapPoint);
 
-    virtual winrt::CompositionPropertySet CreateSubExpressionsPropertySet(
-        winrt::InteractionTracker const& interactionTracker,
-        winrt::Compositor const& compositor,
-        winrt::hstring const& target) = 0;
     virtual winrt::ExpressionAnimation CreateRestingPointExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale) = 0;
     virtual winrt::ExpressionAnimation CreateConditionalExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale) = 0;
-    virtual winrt::ExpressionAnimation UpdateConditionalExpressionAnimation(
+    virtual void UpdateConditionalExpressionAnimationForImpulse(
         winrt::ExpressionAnimation conditionExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualImpulseApplicableZone) const = 0;
-    virtual winrt::ExpressionAnimation UpdateRestingPointExpressionAnimation(
+    virtual void UpdateRestingPointExpressionAnimationForImpulse(
         winrt::ExpressionAnimation restingValueExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const = 0;
     virtual ScrollerSnapPointSortPredicate SortPredicate() = 0;
@@ -151,31 +143,23 @@ public:
     double Value();
 
     //Internal
-    winrt::CompositionPropertySet CreateSubExpressionsPropertySet(
-        winrt::InteractionTracker const& interactionTracker,
-        winrt::Compositor const& compositor,
-        winrt::hstring const& target);
     winrt::ExpressionAnimation CreateRestingPointExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
-    winrt::ExpressionAnimation UpdateConditionalExpressionAnimation(
+    void UpdateConditionalExpressionAnimationForImpulse(
         winrt::ExpressionAnimation conditionExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualImpulseApplicableZone) const;
-    winrt::ExpressionAnimation UpdateRestingPointExpressionAnimation(
+    void UpdateRestingPointExpressionAnimationForImpulse(
         winrt::ExpressionAnimation restingValueExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();
@@ -246,31 +230,23 @@ public:
     double End();
 
     //Internal
-    winrt::CompositionPropertySet CreateSubExpressionsPropertySet(
-        winrt::InteractionTracker const& interactionTracker,
-        winrt::Compositor const& compositor,
-        winrt::hstring const& target);
     winrt::ExpressionAnimation CreateRestingPointExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
-    winrt::ExpressionAnimation UpdateConditionalExpressionAnimation(
+    void UpdateConditionalExpressionAnimationForImpulse(
         winrt::ExpressionAnimation conditionExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualImpulseApplicableZone) const;
-    winrt::ExpressionAnimation UpdateRestingPointExpressionAnimation(
+    void UpdateRestingPointExpressionAnimationForImpulse(
         winrt::ExpressionAnimation restingValueExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();
@@ -357,31 +333,23 @@ public:
     double Value();
 
     //Internal
-    winrt::CompositionPropertySet CreateSubExpressionsPropertySet(
-        winrt::InteractionTracker const& interactionTracker,
-        winrt::Compositor const& compositor,
-        winrt::hstring const& target);
     winrt::ExpressionAnimation CreateRestingPointExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
-    winrt::ExpressionAnimation UpdateConditionalExpressionAnimation(
+    void UpdateConditionalExpressionAnimationForImpulse(
         winrt::ExpressionAnimation conditionExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualImpulseApplicableZone) const;
-    winrt::ExpressionAnimation UpdateRestingPointExpressionAnimation(
+    void UpdateRestingPointExpressionAnimationForImpulse(
         winrt::ExpressionAnimation restingValueExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();
@@ -449,31 +417,23 @@ public:
     double End();
 
     //Internal
-    winrt::CompositionPropertySet CreateSubExpressionsPropertySet(
-        winrt::InteractionTracker const& interactionTracker,
-        winrt::Compositor const& compositor,
-        winrt::hstring const& target);
     winrt::ExpressionAnimation CreateRestingPointExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
-        winrt::Compositor const& compositor,
+        winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
-    winrt::ExpressionAnimation UpdateConditionalExpressionAnimation(
+    void UpdateConditionalExpressionAnimationForImpulse(
         winrt::ExpressionAnimation conditionExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         std::tuple<double, double> actualImpulseApplicableZone) const;
-    winrt::ExpressionAnimation UpdateRestingPointExpressionAnimation(
+    void UpdateRestingPointExpressionAnimationForImpulse(
         winrt::ExpressionAnimation restingValueExpressionAnimation,
-        winrt::CompositionPropertySet const& subExpressionsPropertySet,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();
