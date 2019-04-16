@@ -8,12 +8,14 @@
 #include "UniformGridLayoutState.h"
 #include "UniformGridLayout.h"
 #include "RuntimeProfiler.h"
+#include "VirtualizingLayoutContext.h"
 
 #pragma region IGridLayout
 
 UniformGridLayout::UniformGridLayout()
 {
     __RP_Marker_ClassById(RuntimeProfiler::ProfId_UniformGridLayout);
+    LayoutId(L"UniformGridLayout");
 }
 
 #pragma endregion
@@ -178,14 +180,14 @@ winrt::FlowLayoutAnchorInfo UniformGridLayout::Algorithm_GetAnchorForTargetEleme
 }
 
 winrt::Rect UniformGridLayout::Algorithm_GetExtent(
-    const winrt::Size & availableSize,
-    const winrt::VirtualizingLayoutContext & context,
-    const winrt::UIElement & firstRealized,
+    const winrt::Size& availableSize,
+    const winrt::VirtualizingLayoutContext& context,
+    const winrt::UIElement& firstRealized,
     int firstRealizedItemIndex,
-    const winrt::Rect & firstRealizedLayoutBounds,
-    const winrt::UIElement & lastRealized,
+    const winrt::Rect& firstRealizedLayoutBounds,
+    const winrt::UIElement& lastRealized,
     int lastRealizedItemIndex,
-    const winrt::Rect & lastRealizedLayoutBounds)
+    const winrt::Rect& lastRealizedLayoutBounds)
 {
     UNREFERENCED_PARAMETER(lastRealized);
 
@@ -199,14 +201,14 @@ winrt::Rect UniformGridLayout::Algorithm_GetExtent(
         static_cast<int>(availableSizeMinor / GetMinorSizeWithSpacing(context)) : itemsCount);
     const float lineSize = GetMajorSizeWithSpacing(context);
 
-    extent.*MinorSize() =
-        std::isfinite(availableSizeMinor) ?
-        availableSizeMinor :
-        std::max(0.0f, itemsCount * GetMinorSizeWithSpacing(context) - static_cast<float>(MinItemSpacing()));
-    extent.*MajorSize() = std::max(0.0f, (itemsCount / itemsPerLine) * lineSize - static_cast<float>(LineSpacing()));
-
     if (itemsCount > 0)
     {
+        extent.*MinorSize() =
+            std::isfinite(availableSizeMinor) ?
+            availableSizeMinor :
+            std::max(0.0f, itemsCount * GetMinorSizeWithSpacing(context) - static_cast<float>(MinItemSpacing()));
+        extent.*MajorSize() = std::max(0.0f, (itemsCount / itemsPerLine) * lineSize - static_cast<float>(LineSpacing()));
+
         if (firstRealized)
         {
             MUX_ASSERT(lastRealized);
