@@ -1066,6 +1066,53 @@ void Scroller::UpdateScrollSnapPointsIgnoredValue(
     }
 }
 
+void Scroller::UpdateScrollSnapPointsInertiaFromImpulse(
+    ScrollerDimension dimension,
+    bool isInertiaFromImpulse)
+{
+    MUX_ASSERT(dimension == ScrollerDimension::VerticalScroll || dimension == ScrollerDimension::HorizontalScroll);
+    MUX_ASSERT(!SharedHelpers::IsRS5OrHigher());
+
+    std::set<std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>>, SnapPointWrapperComparator<winrt::ScrollSnapPointBase>> snapPointsSet =
+        dimension == ScrollerDimension::VerticalScroll ? m_sortedConsolidatedVerticalSnapPoints : m_sortedConsolidatedHorizontalSnapPoints;
+
+    winrt::Compositor compositor = m_interactionTracker.Compositor();
+    winrt::IVector<winrt::InteractionTrackerInertiaModifier> modifiers = winrt::make<Vector<winrt::InteractionTrackerInertiaModifier>>();
+
+    for (std::shared_ptr<SnapPointWrapper<winrt::ScrollSnapPointBase>> snapPointWrapper : snapPointsSet)
+    {
+        winrt::InteractionTrackerInertiaRestingValue modifier = winrt::InteractionTrackerInertiaRestingValue::Create(compositor);
+        winrt::ExpressionAnimation conditionExpressionAnimation = nullptr;
+        winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr;
+
+        // REGIB TODO - should this be a single call
+        //snapPointWrapper->GetUpdatedExpressionAnimationsForImpulse(
+        //    isInertiaFromImpulse,
+        //    &conditionExpressionAnimation,
+        //    &restingValueExpressionAnimation);
+        // without SnapPointWrapper::m_isInertiaFromImpulse ?
+
+        snapPointWrapper->SetIsInertiaFromImpulse(isInertiaFromImpulse);
+        snapPointWrapper->GetUpdatedExpressionAnimationsForImpulse(
+            &conditionExpressionAnimation,
+            &restingValueExpressionAnimation);
+
+        modifier.Condition(conditionExpressionAnimation);
+        modifier.RestingValue(restingValueExpressionAnimation);
+
+        modifiers.Append(modifier);
+    }
+
+    if (dimension == ScrollerDimension::HorizontalScroll)
+    {
+        m_interactionTracker.ConfigurePositionXInertiaModifiers(modifiers);
+    }
+    else
+    {
+        m_interactionTracker.ConfigurePositionYInertiaModifiers(modifiers);
+    }
+}
+
 void Scroller::UpdateZoomSnapPointsIgnoredValue()
 {
     bool oldIgnoredValueReset = false;
@@ -1118,8 +1165,8 @@ void Scroller::UpdateZoomSnapPointsIgnoredValue()
         for (std::shared_ptr<SnapPointWrapper<winrt::ZoomSnapPointBase>> snapPointWrapper : m_sortedConsolidatedZoomSnapPoints)
         {
             winrt::InteractionTrackerInertiaRestingValue modifier = winrt::InteractionTrackerInertiaRestingValue::Create(compositor);
-            winrt::ExpressionAnimation conditionExpressionAnimation = nullptr; // snapPointWrapper->ConditionalExpressionAnimation();
-            winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr; // snapPointWrapper->RestingPointExpressionAnimation();
+            winrt::ExpressionAnimation conditionExpressionAnimation = nullptr;
+            winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr;
 
             snapPointWrapper->GetUpdatedExpressionAnimationsForImpulse(
                 m_interactionTracker,
@@ -1135,6 +1182,41 @@ void Scroller::UpdateZoomSnapPointsIgnoredValue()
 
         m_interactionTracker.ConfigureScaleInertiaModifiers(modifiers);
     }
+}
+
+void Scroller::UpdateZoomSnapPointsInertiaFromImpulse(
+    bool isInertiaFromImpulse)
+{
+    MUX_ASSERT(!SharedHelpers::IsRS5OrHigher());
+
+    winrt::Compositor compositor = m_interactionTracker.Compositor();
+    winrt::IVector<winrt::InteractionTrackerInertiaModifier> modifiers = winrt::make<Vector<winrt::InteractionTrackerInertiaModifier>>();
+
+    for (std::shared_ptr<SnapPointWrapper<winrt::ZoomSnapPointBase>> snapPointWrapper : m_sortedConsolidatedZoomSnapPoints)
+    {
+        winrt::InteractionTrackerInertiaRestingValue modifier = winrt::InteractionTrackerInertiaRestingValue::Create(compositor);
+        winrt::ExpressionAnimation conditionExpressionAnimation = nullptr;
+        winrt::ExpressionAnimation restingValueExpressionAnimation = nullptr;
+
+        // REGIB TODO - should this be a single call
+        //snapPointWrapper->GetUpdatedExpressionAnimationsForImpulse(
+        //    isInertiaFromImpulse,
+        //    &conditionExpressionAnimation,
+        //    &restingValueExpressionAnimation);
+        // without SnapPointWrapper::m_isInertiaFromImpulse ?
+
+        snapPointWrapper->SetIsInertiaFromImpulse(isInertiaFromImpulse);
+        snapPointWrapper->GetUpdatedExpressionAnimationsForImpulse(
+            &conditionExpressionAnimation,
+            &restingValueExpressionAnimation);
+
+        modifier.Condition(conditionExpressionAnimation);
+        modifier.RestingValue(restingValueExpressionAnimation);
+
+        modifiers.Append(modifier);
+    }
+
+    m_interactionTracker.ConfigureScaleInertiaModifiers(modifiers);
 }
 
 void Scroller::InertiaStateEntered(
@@ -1237,6 +1319,13 @@ void Scroller::InteractingStateEntered(
     const winrt::InteractionTrackerInteractingStateEnteredArgs& args)
 {
     SCROLLER_TRACE_INFO(*this, TRACE_MSG_METH_INT, METH_NAME, this, args.RequestId());
+
+    if (!SharedHelpers::IsRS5OrHigher())
+    {
+        UpdateScrollSnapPointsInertiaFromImpulse(ScrollerDimension::HorizontalScroll, false /*isInertiaFromImpulse*/);
+        UpdateScrollSnapPointsInertiaFromImpulse(ScrollerDimension::VerticalScroll, false /*isInertiaFromImpulse*/);
+        UpdateZoomSnapPointsInertiaFromImpulse(false /*isInertiaFromImpulse*/);
+    }
 
     UpdateState(winrt::InteractionState::Interaction);
 
@@ -6299,6 +6388,14 @@ void Scroller::ProcessOffsetsChange(
         zoomedVerticalOffset = ComputeValueAfterSnapPoints<winrt::ScrollSnapPointBase>(zoomedVerticalOffset, m_sortedConsolidatedVerticalSnapPoints);
     }
 
+    if (!SharedHelpers::IsRS5OrHigher())
+    {
+        UpdateScrollSnapPointsInertiaFromImpulse(
+            ScrollerDimension::HorizontalScroll, false /*isInertiaFromImpulse*/);
+        UpdateScrollSnapPointsInertiaFromImpulse(
+            ScrollerDimension::VerticalScroll, false /*isInertiaFromImpulse*/);
+    }
+
     switch (animationMode)
     {
         case winrt::AnimationMode::Disabled:
@@ -6397,6 +6494,14 @@ void Scroller::ProcessOffsetsChange(
         }
     }
 
+    if (!SharedHelpers::IsRS5OrHigher())
+    {
+        UpdateScrollSnapPointsInertiaFromImpulse(
+            ScrollerDimension::HorizontalScroll, operationTrigger == InteractionTrackerAsyncOperationTrigger::MouseWheel /*isInertiaFromImpulse*/);
+        UpdateScrollSnapPointsInertiaFromImpulse(
+            ScrollerDimension::VerticalScroll, operationTrigger == InteractionTrackerAsyncOperationTrigger::MouseWheel /*isInertiaFromImpulse*/);
+    }
+
     SCROLLER_TRACE_VERBOSE(*this, TRACE_MSG_METH_METH_STR, METH_NAME, this,
         L"TryUpdatePositionWithAdditionalVelocity", TypeLogging::Float2ToString(winrt::float2(offsetsVelocity)).c_str());
 
@@ -6477,6 +6582,11 @@ void Scroller::ProcessZoomFactorChange(
         zoomFactor = static_cast<float>(ComputeValueAfterSnapPoints<winrt::ZoomSnapPointBase>(zoomFactor, m_sortedConsolidatedZoomSnapPoints));
     }
 
+    if (!SharedHelpers::IsRS5OrHigher())
+    {
+        UpdateZoomSnapPointsInertiaFromImpulse(false /*isInertiaFromImpulse*/);
+    }
+
     switch (animationMode)
     {
         case winrt::AnimationMode::Disabled:
@@ -6549,6 +6659,11 @@ void Scroller::ProcessZoomFactorChange(
         {
             zoomFactorVelocity = std::max(zoomFactorVelocity - c_minVelocity, -c_maxVelocity);
         }
+    }
+
+    if (!SharedHelpers::IsRS5OrHigher())
+    {
+        UpdateZoomSnapPointsInertiaFromImpulse(operationTrigger == InteractionTrackerAsyncOperationTrigger::MouseWheel /*isInertiaFromImpulse*/);
     }
 
     SCROLLER_TRACE_VERBOSE(*this, TRACE_MSG_METH_METH_FLT_STR, METH_NAME, this,

@@ -377,7 +377,9 @@ private:
         double viewportWidth, double viewportHeight);
     void UpdateScrollAutomationPatternProperties();
     void UpdateScrollSnapPointsIgnoredValue(ScrollerDimension dimension);
+    void UpdateScrollSnapPointsInertiaFromImpulse(ScrollerDimension dimension, bool isInertiaFromImpulse);
     void UpdateZoomSnapPointsIgnoredValue();
+    void UpdateZoomSnapPointsInertiaFromImpulse(bool isInertiaFromImpulse);
     void UpdateOffset(ScrollerDimension dimension, double zoomedOffset);
     void UpdateScrollControllerInteractionsAllowed(ScrollerDimension dimension);
     void UpdateScrollControllerValues(ScrollerDimension dimension);

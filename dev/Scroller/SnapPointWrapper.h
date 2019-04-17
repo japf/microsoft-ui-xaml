@@ -23,6 +23,7 @@ public:
     int CombinationCount() const;
     bool ResetIgnoredValue();
     void SetIgnoredValue(double ignoredValue);
+    void SetIsInertiaFromImpulse(bool isInertiaFromImpulse);
 
     winrt::ExpressionAnimation CreateRestingPointExpression(
         winrt::InteractionTracker const& interactionTracker,
@@ -35,6 +36,9 @@ public:
     void GetUpdatedExpressionAnimationsForImpulse(
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
+        winrt::ExpressionAnimation* conditionalExpressionAnimation,
+        winrt::ExpressionAnimation* restingPointExpressionAnimation);
+    void GetUpdatedExpressionAnimationsForImpulse(
         winrt::ExpressionAnimation* conditionalExpressionAnimation,
         winrt::ExpressionAnimation* restingPointExpressionAnimation);
     void DetermineActualApplicableZone(
@@ -56,6 +60,7 @@ private:
     std::tuple<double, double> m_actualImpulseApplicableZone{ -INFINITY, INFINITY };
     int m_combinationCount{ 0 };
     double m_ignoredValue{ NAN };
+    bool m_isInertiaFromImpulse{ false };
     winrt::ExpressionAnimation m_conditionExpressionAnimation{ nullptr };
     winrt::ExpressionAnimation m_restingValueExpressionAnimation{ nullptr };
 };

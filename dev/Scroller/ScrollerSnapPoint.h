@@ -42,22 +42,24 @@ public:
     bool operator== (SnapPointBase* snapPoint);
 
     virtual winrt::ExpressionAnimation CreateRestingPointExpression(
+        bool isInertiaFromImpulse,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale) = 0;
     virtual winrt::ExpressionAnimation CreateConditionalExpression(
+        bool isInertiaFromImpulse,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale) = 0;
     virtual void UpdateConditionalExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation conditionExpressionAnimation,
+        winrt::ExpressionAnimation const& conditionExpressionAnimation,
         std::tuple<double, double> actualImpulseApplicableZone) const = 0;
     virtual void UpdateRestingPointExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation restingValueExpressionAnimation,
+        winrt::ExpressionAnimation const& restingValueExpressionAnimation,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const = 0;
     virtual ScrollerSnapPointSortPredicate SortPredicate() = 0;
@@ -89,12 +91,27 @@ public:
     bool SnapsAt(
         std::tuple<double, double> actualApplicableZone,
         double value) const;
+    void UpdateConditionalExpressionAnimationForImpulse(
+        winrt::ExpressionAnimation const& conditionExpressionAnimation,
+        bool isInertiaFromImpulse) const;
+    void UpdateRestingPointExpressionAnimationForImpulse(
+        winrt::ExpressionAnimation const& restingValueExpressionAnimation,
+        bool isInertiaFromImpulse) const;
+    void SetBooleanParameter(
+        winrt::ExpressionAnimation const& expressionAnimation,
+        winrt::hstring const& booleanName,
+        bool booleanValue) const;
+    void SetScalarParameter(
+        winrt::ExpressionAnimation const& expressionAnimation,
+        winrt::hstring const& scalarName,
+        float scalarValue) const;
 
 protected:
     // Needed as work around for Modern Idl inheritance bug
     SnapPointBase();
 
     winrt::hstring GetTargetExpression(winrt::hstring const& target) const;
+    winrt::hstring GetIsInertiaFromImpulseExpression(winrt::hstring const& target) const;
 
     double m_specifiedApplicableRange{ INFINITY };
 #ifdef ApplicableRangeType
@@ -144,22 +161,24 @@ public:
 
     //Internal
     winrt::ExpressionAnimation CreateRestingPointExpression(
+        bool isInertiaFromImpulse,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
+        bool isInertiaFromImpulse,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     void UpdateConditionalExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation conditionExpressionAnimation,
+        winrt::ExpressionAnimation const& conditionExpressionAnimation,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     void UpdateRestingPointExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation restingValueExpressionAnimation,
+        winrt::ExpressionAnimation const& restingValueExpressionAnimation,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();
@@ -231,22 +250,24 @@ public:
 
     //Internal
     winrt::ExpressionAnimation CreateRestingPointExpression(
+        bool isInertiaFromImpulse,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
+        bool isInertiaFromImpulse,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     void UpdateConditionalExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation conditionExpressionAnimation,
+        winrt::ExpressionAnimation const& conditionExpressionAnimation,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     void UpdateRestingPointExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation restingValueExpressionAnimation,
+        winrt::ExpressionAnimation const& restingValueExpressionAnimation,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();
@@ -334,22 +355,24 @@ public:
 
     //Internal
     winrt::ExpressionAnimation CreateRestingPointExpression(
+        bool isInertiaFromImpulse,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
+        bool isInertiaFromImpulse,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     void UpdateConditionalExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation conditionExpressionAnimation,
+        winrt::ExpressionAnimation const& conditionExpressionAnimation,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     void UpdateRestingPointExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation restingValueExpressionAnimation,
+        winrt::ExpressionAnimation const& restingValueExpressionAnimation,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();
@@ -418,22 +441,24 @@ public:
 
     //Internal
     winrt::ExpressionAnimation CreateRestingPointExpression(
+        bool isInertiaFromImpulse,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     winrt::ExpressionAnimation CreateConditionalExpression(
+        bool isInertiaFromImpulse,
         std::tuple<double, double> actualApplicableZone,
         std::tuple<double, double> actualImpulseApplicableZone,
         winrt::InteractionTracker const& interactionTracker,
         winrt::hstring const& target,
         winrt::hstring const& scale);
     void UpdateConditionalExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation conditionExpressionAnimation,
+        winrt::ExpressionAnimation const& conditionExpressionAnimation,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     void UpdateRestingPointExpressionAnimationForImpulse(
-        winrt::ExpressionAnimation restingValueExpressionAnimation,
+        winrt::ExpressionAnimation const& restingValueExpressionAnimation,
         double ignoredValue,
         std::tuple<double, double> actualImpulseApplicableZone) const;
     ScrollerSnapPointSortPredicate SortPredicate();

@@ -57,6 +57,14 @@ void SnapPointWrapper<T>::SetIgnoredValue(double ignoredValue)
 }
 
 template<typename T>
+void SnapPointWrapper<T>::SetIsInertiaFromImpulse(bool isInertiaFromImpulse)
+{
+    MUX_ASSERT(!SharedHelpers::IsRS5OrHigher());
+
+    m_isInertiaFromImpulse = isInertiaFromImpulse;
+}
+
+template<typename T>
 winrt::ExpressionAnimation SnapPointWrapper<T>::CreateRestingPointExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
@@ -65,6 +73,7 @@ winrt::ExpressionAnimation SnapPointWrapper<T>::CreateRestingPointExpression(
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
     m_restingValueExpressionAnimation = snapPoint->CreateRestingPointExpression(
+        m_isInertiaFromImpulse,
         m_ignoredValue,
         m_actualImpulseApplicableZone,
         interactionTracker,
@@ -83,6 +92,7 @@ winrt::ExpressionAnimation SnapPointWrapper<T>::CreateConditionalExpression(
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
     m_conditionExpressionAnimation = snapPoint->CreateConditionalExpression(
+        m_isInertiaFromImpulse,
         m_actualApplicableZone,
         m_actualImpulseApplicableZone,
         interactionTracker,
@@ -108,6 +118,26 @@ void SnapPointWrapper<T>::GetUpdatedExpressionAnimationsForImpulse(
         m_restingValueExpressionAnimation,
         m_ignoredValue,
         m_actualImpulseApplicableZone);
+
+    *conditionalExpressionAnimation = m_conditionExpressionAnimation;
+    *restingPointExpressionAnimation = m_restingValueExpressionAnimation;
+}
+
+template<typename T>
+void SnapPointWrapper<T>::GetUpdatedExpressionAnimationsForImpulse(
+    winrt::ExpressionAnimation* conditionalExpressionAnimation,
+    winrt::ExpressionAnimation* restingPointExpressionAnimation)
+{
+    MUX_ASSERT(!SharedHelpers::IsRS5OrHigher());
+
+    SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
+
+    snapPoint->UpdateConditionalExpressionAnimationForImpulse(
+        m_conditionExpressionAnimation,
+        m_isInertiaFromImpulse);
+    snapPoint->UpdateRestingPointExpressionAnimationForImpulse(
+        m_restingValueExpressionAnimation,
+        m_isInertiaFromImpulse);
 
     *conditionalExpressionAnimation = m_conditionExpressionAnimation;
     *restingPointExpressionAnimation = m_restingValueExpressionAnimation;
@@ -204,6 +234,9 @@ template bool SnapPointWrapper<winrt::ZoomSnapPointBase>::ResetIgnoredValue();
 template void SnapPointWrapper<winrt::ScrollSnapPointBase>::SetIgnoredValue(double ignoredValue);
 template void SnapPointWrapper<winrt::ZoomSnapPointBase>::SetIgnoredValue(double ignoredValue);
 
+template void SnapPointWrapper<winrt::ScrollSnapPointBase>::SetIsInertiaFromImpulse(bool isInertiaFromImpulse);
+template void SnapPointWrapper<winrt::ZoomSnapPointBase>::SetIsInertiaFromImpulse(bool isInertiaFromImpulse);
+
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ScrollSnapPointBase>::CreateRestingPointExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
@@ -227,9 +260,15 @@ template void SnapPointWrapper<winrt::ScrollSnapPointBase>::GetUpdatedExpression
     winrt::hstring const& target,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation);
+template void SnapPointWrapper<winrt::ScrollSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
+    winrt::ExpressionAnimation* conditionalExpressionAnimation,
+    winrt::ExpressionAnimation* restingPointExpressionAnimation);
 template void SnapPointWrapper<winrt::ZoomSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
+    winrt::ExpressionAnimation* conditionalExpressionAnimation,
+    winrt::ExpressionAnimation* restingPointExpressionAnimation);
+template void SnapPointWrapper<winrt::ZoomSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation);
 
