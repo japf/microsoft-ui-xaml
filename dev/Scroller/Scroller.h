@@ -303,9 +303,12 @@ private:
     template <typename T> void SetupSnapPoints(
         std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
         ScrollerDimension dimension);
-    template <typename T> void FixSnapPointRanges(
+    template <typename T> void UpdateSnapPointsRanges(
         std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
         bool forImpulseOnly);
+    template <typename T> bool UpdateSnapPointsIgnoredValue(
+        std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
+        double newIgnoredValue);
     void SetupInteractionTrackerBoundaries();
     void SetupInteractionTrackerZoomFactorBoundaries(
         double minZoomFactor, double maxZoomFactor);
@@ -380,6 +383,7 @@ private:
     void UpdateScrollSnapPointsInertiaFromImpulse(ScrollerDimension dimension, bool isInertiaFromImpulse);
     void UpdateZoomSnapPointsIgnoredValue();
     void UpdateZoomSnapPointsInertiaFromImpulse(bool isInertiaFromImpulse);
+    void UpdateIsInertiaFromImpulse(bool isInertiaFromImpulse);
     void UpdateOffset(ScrollerDimension dimension, double zoomedOffset);
     void UpdateScrollControllerInteractionsAllowed(ScrollerDimension dimension);
     void UpdateScrollControllerValues(ScrollerDimension dimension);
@@ -530,8 +534,9 @@ private:
         int32_t zoomFactorChangeId);
     int GetNextViewChangeId();
 
-    bool IsLoaded();
-    bool IsLoadedAndSetUp();
+    bool IsInertiaFromImpulse() const;
+    bool IsLoaded() const;
+    bool IsLoadedAndSetUp() const;
     bool IsInputKindIgnored(winrt::InputKind const& inputKind);
     bool HasBringingIntoViewListener() const
     {
@@ -760,6 +765,7 @@ private:
     bool m_horizontalSnapPointsNeedViewportUpdates{ false }; // True when at least one horizontal snap point is not near aligned.
     bool m_verticalSnapPointsNeedViewportUpdates{ false }; // True when at least one vertical snap point is not near aligned.
     bool m_isAnchorElementDirty{ true }; // False when m_anchorElement is up-to-date, True otherwise.
+    bool m_isInertiaFromImpulse{ false }; // Only used on pre-RS5 versions, as a replacement for the InteractionTracker.IsInertiaFromImpulse property.
 
     // Display information used for mouse-wheel scrolling on pre-RS5 Windows versions.
     double m_rawPixelsPerViewPixel{};
@@ -869,4 +875,10 @@ private:
     static constexpr wstring_view s_maxOffsetPropertyName{ L"MaxOffset"sv };
     static constexpr wstring_view s_offsetPropertyName{ L"Offset"sv };
     static constexpr wstring_view s_multiplierPropertyName{ L"Multiplier"sv };
+
+    // Properties used in snap points composition expressions
+    static constexpr wstring_view s_naturalRestingPositionXPropertyName{ L"NaturalRestingPosition.x"sv };
+    static constexpr wstring_view s_naturalRestingPositionYPropertyName{ L"NaturalRestingPosition.y"sv };
+    static constexpr wstring_view s_naturalRestingScalePropertyName{ L"NaturalRestingScale"sv };
+    static constexpr wstring_view s_targetScalePropertyName{ L"this.Target.Scale"sv };
 };

@@ -57,28 +57,21 @@ void SnapPointWrapper<T>::SetIgnoredValue(double ignoredValue)
 }
 
 template<typename T>
-void SnapPointWrapper<T>::SetIsInertiaFromImpulse(bool isInertiaFromImpulse)
-{
-    MUX_ASSERT(!SharedHelpers::IsRS5OrHigher());
-
-    m_isInertiaFromImpulse = isInertiaFromImpulse;
-}
-
-template<typename T>
 winrt::ExpressionAnimation SnapPointWrapper<T>::CreateRestingPointExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
-    winrt::hstring const& scale)
+    winrt::hstring const& scale,
+    bool isInertiaFromImpulse)
 {
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
     m_restingValueExpressionAnimation = snapPoint->CreateRestingPointExpression(
-        m_isInertiaFromImpulse,
         m_ignoredValue,
         m_actualImpulseApplicableZone,
         interactionTracker,
         target,
-        scale);
+        scale,
+        isInertiaFromImpulse);
 
     return m_restingValueExpressionAnimation;
 }
@@ -87,25 +80,25 @@ template<typename T>
 winrt::ExpressionAnimation SnapPointWrapper<T>::CreateConditionalExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
-    winrt::hstring const& scale)
+    winrt::hstring const& scale,
+    bool isInertiaFromImpulse)
 {
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
     m_conditionExpressionAnimation = snapPoint->CreateConditionalExpression(
-        m_isInertiaFromImpulse,
         m_actualApplicableZone,
         m_actualImpulseApplicableZone,
         interactionTracker,
         target,
-        scale);
+        scale,
+        isInertiaFromImpulse);
 
     return m_conditionExpressionAnimation;
 }
 
+// Invoked when the InteractionTracker reaches the Idle State and a new ignored value may have to be set.
 template<typename T>
 void SnapPointWrapper<T>::GetUpdatedExpressionAnimationsForImpulse(
-    winrt::InteractionTracker const& interactionTracker,
-    winrt::hstring const& target,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation)
 {
@@ -123,8 +116,11 @@ void SnapPointWrapper<T>::GetUpdatedExpressionAnimationsForImpulse(
     *restingPointExpressionAnimation = m_restingValueExpressionAnimation;
 }
 
+// Invoked on pre-RS5 versions when Scroller::m_isInertiaFromImpulse changed
+// and the 'iIFI' boolean parameters need to be updated.
 template<typename T>
 void SnapPointWrapper<T>::GetUpdatedExpressionAnimationsForImpulse(
+    bool isInertiaFromImpulse,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation)
 {
@@ -132,12 +128,12 @@ void SnapPointWrapper<T>::GetUpdatedExpressionAnimationsForImpulse(
 
     SnapPointBase* snapPoint = GetSnapPointFromWrapper(this);
 
-    snapPoint->UpdateConditionalExpressionAnimationForImpulse(
+    snapPoint->UpdateExpressionAnimationForImpulse(
         m_conditionExpressionAnimation,
-        m_isInertiaFromImpulse);
-    snapPoint->UpdateRestingPointExpressionAnimationForImpulse(
+        isInertiaFromImpulse);
+    snapPoint->UpdateExpressionAnimationForImpulse(
         m_restingValueExpressionAnimation,
-        m_isInertiaFromImpulse);
+        isInertiaFromImpulse);
 
     *conditionalExpressionAnimation = m_conditionExpressionAnimation;
     *restingPointExpressionAnimation = m_restingValueExpressionAnimation;
@@ -234,41 +230,40 @@ template bool SnapPointWrapper<winrt::ZoomSnapPointBase>::ResetIgnoredValue();
 template void SnapPointWrapper<winrt::ScrollSnapPointBase>::SetIgnoredValue(double ignoredValue);
 template void SnapPointWrapper<winrt::ZoomSnapPointBase>::SetIgnoredValue(double ignoredValue);
 
-template void SnapPointWrapper<winrt::ScrollSnapPointBase>::SetIsInertiaFromImpulse(bool isInertiaFromImpulse);
-template void SnapPointWrapper<winrt::ZoomSnapPointBase>::SetIsInertiaFromImpulse(bool isInertiaFromImpulse);
-
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ScrollSnapPointBase>::CreateRestingPointExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
-    winrt::hstring const& scale);
+    winrt::hstring const& scale,
+    bool isInertiaFromImpulse);
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ZoomSnapPointBase>::CreateRestingPointExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
-    winrt::hstring const& scale);
+    winrt::hstring const& scale,
+    bool isInertiaFromImpulse);
 
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ScrollSnapPointBase>::CreateConditionalExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
-    winrt::hstring const& scale);
+    winrt::hstring const& scale,
+    bool isInertiaFromImpulse);
 template winrt::ExpressionAnimation SnapPointWrapper<winrt::ZoomSnapPointBase>::CreateConditionalExpression(
     winrt::InteractionTracker const& interactionTracker,
     winrt::hstring const& target,
-    winrt::hstring const& scale);
+    winrt::hstring const& scale,
+    bool isInertiaFromImpulse);
 
 template void SnapPointWrapper<winrt::ScrollSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
-    winrt::InteractionTracker const& interactionTracker,
-    winrt::hstring const& target,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation);
 template void SnapPointWrapper<winrt::ScrollSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
+    bool isInertiaFromImpulse,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation);
 template void SnapPointWrapper<winrt::ZoomSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
-    winrt::InteractionTracker const& interactionTracker,
-    winrt::hstring const& target,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation);
 template void SnapPointWrapper<winrt::ZoomSnapPointBase>::GetUpdatedExpressionAnimationsForImpulse(
+    bool isInertiaFromImpulse,
     winrt::ExpressionAnimation* conditionalExpressionAnimation,
     winrt::ExpressionAnimation* restingPointExpressionAnimation);
 
