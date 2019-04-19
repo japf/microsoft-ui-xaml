@@ -311,7 +311,6 @@ private:
     double ActualOffset() const;
     double ActualStart() const;
     double ActualEnd() const;
-    double ActualImpulseIgnoredValue(double impulseIgnoredValue) const;
     double DetermineFirstRepeatedSnapPointValue() const;
     double DetermineLastRepeatedSnapPointValue() const;
     double DetermineMinActualApplicableZone(

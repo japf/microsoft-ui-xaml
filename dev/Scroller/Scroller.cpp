@@ -1136,7 +1136,7 @@ void Scroller::UpdateZoomSnapPointsInertiaFromImpulse(
     }
 }
 
-// On pre-RS5 releases, updates the 'iIFI' boolean parameters of the snap points' composition expressions.
+// On pre-RS5 releases, updates the SnapPointBase::s_isInertiaFromImpulse boolean parameters of the snap points' composition expressions.
 void Scroller::UpdateIsInertiaFromImpulse(
     bool isInertiaFromImpulse)
 {
@@ -1251,7 +1251,7 @@ void Scroller::InteractingStateEntered(
 {
     SCROLLER_TRACE_INFO(*this, TRACE_MSG_METH_INT, METH_NAME, this, args.RequestId());
 
-    // On pre-RS5 versions, turn off the 'iIFI' boolean parameters on the snap points' composition expressions.
+    // On pre-RS5 versions, turn off the SnapPointBase::s_isInertiaFromImpulse boolean parameters on the snap points' composition expressions.
     UpdateIsInertiaFromImpulse(false /*isInertiaFromImpulse*/);
 
     UpdateState(winrt::InteractionState::Interaction);
@@ -6389,7 +6389,7 @@ void Scroller::ProcessOffsetsChange(
         zoomedVerticalOffset = ComputeValueAfterSnapPoints<winrt::ScrollSnapPointBase>(zoomedVerticalOffset, m_sortedConsolidatedVerticalSnapPoints);
     }
 
-    // On pre-RS5 versions, turn off the 'iIFI' boolean parameters on the snap points' composition expressions.
+    // On pre-RS5 versions, turn off the SnapPointBase::s_isInertiaFromImpulse boolean parameters on the snap points' composition expressions.
     UpdateIsInertiaFromImpulse(false /*isInertiaFromImpulse*/);
 
     switch (animationMode)
@@ -6490,8 +6490,8 @@ void Scroller::ProcessOffsetsChange(
         }
     }
 
-    // On pre-RS5 versions, the 'iIFI' boolean parameters of the snap points' composition expressions depend on whether the
-    // request was triggere by the mouse wheel or not.
+    // On pre-RS5 versions, the SnapPointBase::s_isInertiaFromImpulse boolean parameters of the snap points' composition expressions
+    // depend on whether the request was triggere by the mouse wheel or not.
     UpdateIsInertiaFromImpulse(operationTrigger == InteractionTrackerAsyncOperationTrigger::MouseWheel /*isInertiaFromImpulse*/);
 
     SCROLLER_TRACE_VERBOSE(*this, TRACE_MSG_METH_METH_STR, METH_NAME, this,
@@ -6574,7 +6574,7 @@ void Scroller::ProcessZoomFactorChange(
         zoomFactor = static_cast<float>(ComputeValueAfterSnapPoints<winrt::ZoomSnapPointBase>(zoomFactor, m_sortedConsolidatedZoomSnapPoints));
     }
 
-    // On pre-RS5 versions, turn off the 'iIFI' boolean parameters on the snap points' composition expressions.
+    // On pre-RS5 versions, turn off the SnapPointBase::s_isInertiaFromImpulse boolean parameters on the snap points' composition expressions.
     UpdateIsInertiaFromImpulse(false /*isInertiaFromImpulse*/);
 
     switch (animationMode)
@@ -6651,8 +6651,8 @@ void Scroller::ProcessZoomFactorChange(
         }
     }
 
-    // On pre-RS5 versions, the 'iIFI' boolean parameters of the snap points' composition expressions depend on whether the
-    // request was triggere by the mouse wheel or not.
+    // On pre-RS5 versions, the SnapPointBase::s_isInertiaFromImpulse boolean parameters of the snap points' composition expressions
+    // depend on whether the request was triggere by the mouse wheel or not.
     UpdateIsInertiaFromImpulse(operationTrigger == InteractionTrackerAsyncOperationTrigger::MouseWheel /*isInertiaFromImpulse*/);
 
     SCROLLER_TRACE_VERBOSE(*this, TRACE_MSG_METH_METH_FLT_STR, METH_NAME, this,
