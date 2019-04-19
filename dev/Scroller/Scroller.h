@@ -306,9 +306,16 @@ private:
     template <typename T> void UpdateSnapPointsRanges(
         std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
         bool forImpulseOnly);
+    template <typename T> void UpdateSnapPointsIgnoredValue(
+        std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
+        ScrollerDimension dimension);
     template <typename T> bool UpdateSnapPointsIgnoredValue(
         std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
         double newIgnoredValue);
+    template <typename T> void UpdateSnapPointsInertiaFromImpulse(
+        std::set<std::shared_ptr<SnapPointWrapper<T>>, SnapPointWrapperComparator<T>>* snapPointsSet,
+        ScrollerDimension dimension,
+        bool isInertiaFromImpulse);
     void SetupInteractionTrackerBoundaries();
     void SetupInteractionTrackerZoomFactorBoundaries(
         double minZoomFactor, double maxZoomFactor);
@@ -379,10 +386,6 @@ private:
         double unzoomedExtentWidth, double unzoomedExtentHeight,
         double viewportWidth, double viewportHeight);
     void UpdateScrollAutomationPatternProperties();
-    void UpdateScrollSnapPointsIgnoredValue(ScrollerDimension dimension);
-    void UpdateScrollSnapPointsInertiaFromImpulse(ScrollerDimension dimension, bool isInertiaFromImpulse);
-    void UpdateZoomSnapPointsIgnoredValue();
-    void UpdateZoomSnapPointsInertiaFromImpulse(bool isInertiaFromImpulse);
     void UpdateIsInertiaFromImpulse(bool isInertiaFromImpulse);
     void UpdateOffset(ScrollerDimension dimension, double zoomedOffset);
     void UpdateScrollControllerInteractionsAllowed(ScrollerDimension dimension);
