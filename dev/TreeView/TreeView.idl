@@ -124,6 +124,7 @@ unsealed runtimeclass TreeView : Windows.UI.Xaml.Controls.Control
     event Windows.Foundation.TypedEventHandler<TreeView, TreeViewItemInvokedEventArgs> ItemInvoked;
     event Windows.Foundation.TypedEventHandler<TreeView, TreeViewExpandingEventArgs> Expanding;
     event Windows.Foundation.TypedEventHandler<TreeView, TreeViewCollapsedEventArgs> Collapsed;
+    event Windows.Foundation.TypedEventHandler<TreeView, Windows.UI.Xaml.Controls.SelectionChangedEventArgs> SelectionChanged;
 
     static Windows.UI.Xaml.DependencyProperty SelectionModeProperty{ get; };
 

@@ -305,6 +305,11 @@ void TreeView::OnListControlDragItemsCompleted(const winrt::IInspectable& sender
     m_dragItemsCompletedEventSource(*this, *treeViewArgs);
 }
 
+void TreeView::OnListControlSelectionChanged(const winrt::IInspectable& sender, const winrt::SelectionChangedEventArgs& args)
+{
+    m_selectionChangedEventSource(*this, args);
+}
+
 void TreeView::UpdateItemsSelectionMode(bool isMultiSelect)
 {
     auto listControl = ListControl();
@@ -381,6 +386,7 @@ void TreeView::OnApplyTemplate()
         m_containerContentChangingRevoker = listControl.ContainerContentChanging(winrt::auto_revoke, { this, &TreeView::OnContainerContentChanging });
         m_dragItemsStartingRevoker = listControl.DragItemsStarting(winrt::auto_revoke, { this, &TreeView::OnListControlDragItemsStarting });
         m_dragItemsCompletedRevoker = listControl.DragItemsCompleted(winrt::auto_revoke, { this, &TreeView::OnListControlDragItemsCompleted });
+        m_selectionChangedRevoker = listControl.SelectionChanged(winrt::auto_revoke, { this, &TreeView::OnListControlSelectionChanged });
 
         if (m_pendingSelectedNodes && m_pendingSelectedNodes.get().Size() > 0)
         {

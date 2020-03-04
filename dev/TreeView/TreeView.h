@@ -47,6 +47,7 @@ public:
     void OnNodeCollapsed(const winrt::TreeViewNode& sender, const winrt::IInspectable&);
     void OnListControlDragItemsStarting(const winrt::IInspectable& sender, const winrt::DragItemsStartingEventArgs& args);
     void OnListControlDragItemsCompleted(const winrt::IInspectable& sender, const winrt::DragItemsCompletedEventArgs& args);
+    void OnListControlSelectionChanged(const winrt::IInspectable& sender, const winrt::SelectionChangedEventArgs& args);
     void OnPropertyChanged(const winrt::DependencyPropertyChangedEventArgs& args);
     void UpdateItemsSelectionMode(bool isMultiSelect);
 
@@ -77,4 +78,5 @@ private:
     winrt::ListViewBase::ContainerContentChanging_revoker m_containerContentChangingRevoker{};
     winrt::ListViewBase::DragItemsStarting_revoker m_dragItemsStartingRevoker{};
     winrt::ListViewBase::DragItemsCompleted_revoker m_dragItemsCompletedRevoker{};
+    winrt::ListViewBase::SelectionChanged_revoker m_selectionChangedRevoker{};
 };

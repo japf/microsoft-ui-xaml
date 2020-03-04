@@ -162,7 +162,13 @@ namespace MUXControlsTestApp
             }
         }
 
-        private void TestTreeViewContentMode_ItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+        private void TestTreeView_SelectionChanged(TreeView sender, SelectionChangedEventArgs args)
+        {
+            var firstAdded = args.AddedItems.Count > 0 ? ((TreeViewNode)args.AddedItems[0]).ToString() : "n/a";
+            Results.Text = $"SelectionChanged: Added: {args.AddedItems.Count} (first: {firstAdded}) Removed: {args.RemovedItems.Count}";
+        }
+
+    private void TestTreeViewContentMode_ItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
         {
             var item = args.InvokedItem as TreeViewItemSource;
             Results.Text = "ItemClicked:" + item.Content;

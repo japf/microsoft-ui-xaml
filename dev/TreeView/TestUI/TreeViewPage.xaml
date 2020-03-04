@@ -84,7 +84,8 @@
                         AutomationProperties.Name="TestTreeView"
                         HorizontalAlignment="Left"
                         Width="400" Height="400"
-                        ItemInvoked="TestTreeView_ItemInvoked"/>
+                        ItemInvoked="TestTreeView_ItemInvoked"
+                        SelectionChanged="TestTreeView_SelectionChanged"/>
 
                     <muxcontrols:TreeView x:Name="TestTreeView2"
                         AutomationProperties.Name="TestTreeView2"
