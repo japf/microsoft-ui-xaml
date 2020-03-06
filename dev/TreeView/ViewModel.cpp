@@ -1088,7 +1088,7 @@ void ViewModel::ClearEventTokenVectors()
         }
     }
 
-    // Remove SelectedNodeChildrenChangtedEvent
+    // Remove SelectedNodeChildrenChangedEvent
     if (auto selectedNodes = m_selectedNodes.safe_get())
     {
         for (uint32_t i = 0; i < selectedNodes.Size(); i++)
