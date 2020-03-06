@@ -71,7 +71,7 @@ public:
     {
         auto inner = GetVectorInnerImpl();
         auto oldNode = winrt::get_self<TreeViewNode>(inner->GetAt(index));
-        // UpdateNodeSelection will call RemoveAtCore
+        // UpdateSelection will call RemoveAtCore
         UpdateSelection(*oldNode, TreeNodeSelectionState::UnSelected);
     }
 
@@ -257,6 +257,7 @@ ViewModel::ViewModel()
     auto selectedNodes = winrt::make_self<SelectedTreeNodeVector>();
     selectedNodes->SetViewModel(*this);
     m_selectedNodes.set(*selectedNodes);
+    m_selectedNodes.get().
 
     auto selectedItems = winrt::make_self<SelectedItemsVector>();
     selectedItems->SetViewModel(*this);
