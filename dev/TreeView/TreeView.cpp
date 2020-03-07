@@ -307,7 +307,7 @@ void TreeView::OnListControlDragItemsCompleted(const winrt::IInspectable& sender
 
 void TreeView::OnListControlSelectionChanged(const winrt::IInspectable& sender, const winrt::SelectionChangedEventArgs& args)
 {
-    m_selectionChangedEventSource(*this, args);
+    // m_selectionChangedEventSource(*this, args);
 }
 
 void TreeView::UpdateItemsSelectionMode(bool isMultiSelect)

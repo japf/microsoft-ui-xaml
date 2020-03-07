@@ -306,7 +306,7 @@ void TreeViewProperties::ItemInvoked(winrt::event_token const& token)
     m_itemInvokedEventSource.remove(token);
 }
 
-winrt::event_token TreeViewProperties::SelectionChanged(winrt::TypedEventHandler<winrt::TreeView, winrt::SelectionChangedEventArgs> const& value)
+winrt::event_token TreeViewProperties::SelectionChanged(winrt::TypedEventHandler<winrt::TreeView, winrt::TreeViewSelectionChangedEventArgs> const& value)
 {
     return m_selectionChangedEventSource.add(value);
 }

@@ -94,6 +94,14 @@ runtimeclass TreeViewDragItemsCompletedEventArgs
     }
 }
 
+[WUXC_VERSION_RS5]
+[webhosthidden]
+runtimeclass TreeViewSelectionChangedEventArgs
+{
+    Windows.Foundation.Collections.IVectorView<Object> AddedItems{ get; };
+    Windows.Foundation.Collections.IVectorView<Object> RemovedItems{ get; };
+}
+
 [WUXC_VERSION_RS4]
 [webhosthidden]
 [WUXC_INTERFACE_NAME("ITreeViewList", 0f00a54e-099a-47a5-a942-94692b01f452)]
@@ -124,7 +132,7 @@ unsealed runtimeclass TreeView : Windows.UI.Xaml.Controls.Control
     event Windows.Foundation.TypedEventHandler<TreeView, TreeViewItemInvokedEventArgs> ItemInvoked;
     event Windows.Foundation.TypedEventHandler<TreeView, TreeViewExpandingEventArgs> Expanding;
     event Windows.Foundation.TypedEventHandler<TreeView, TreeViewCollapsedEventArgs> Collapsed;
-    event Windows.Foundation.TypedEventHandler<TreeView, Windows.UI.Xaml.Controls.SelectionChangedEventArgs> SelectionChanged;
+    event Windows.Foundation.TypedEventHandler<TreeView, TreeViewSelectionChangedEventArgs> SelectionChanged;
 
     static Windows.UI.Xaml.DependencyProperty SelectionModeProperty{ get; };
 

@@ -21,6 +21,7 @@ using TreeViewItemInvokedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewItemInvo
 using TreeViewExpandingEventArgs = Microsoft.UI.Xaml.Controls.TreeViewExpandingEventArgs;
 using TreeViewDragItemsStartingEventArgs = Microsoft.UI.Xaml.Controls.TreeViewDragItemsStartingEventArgs;
 using TreeViewDragItemsCompletedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewDragItemsCompletedEventArgs;
+using TreeViewSelectionChangedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewSelectionChangedEventArgs;
 using TreeViewList = Microsoft.UI.Xaml.Controls.TreeViewList;
 using TreeViewItem = Microsoft.UI.Xaml.Controls.TreeViewItem;
 using MaterialHelperTestApi = Microsoft.UI.Private.Media.MaterialHelperTestApi;
@@ -162,7 +163,7 @@ namespace MUXControlsTestApp
             }
         }
 
-        private void TestTreeView_SelectionChanged(TreeView sender, SelectionChangedEventArgs args)
+        private void TestTreeView_SelectionChanged(TreeView sender, TreeViewSelectionChangedEventArgs args)
         {
             var firstAdded = args.AddedItems.Count > 0 ? ((TreeViewNode)args.AddedItems[0]).ToString() : "n/a";
             Results.Text = $"SelectionChanged: Added: {args.AddedItems.Count} (first: {firstAdded}) Removed: {args.RemovedItems.Count}";
