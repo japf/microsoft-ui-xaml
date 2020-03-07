@@ -94,7 +94,7 @@ runtimeclass TreeViewDragItemsCompletedEventArgs
     }
 }
 
-[WUXC_VERSION_RS5]
+[WUXC_VERSION_RS4]
 [webhosthidden]
 runtimeclass TreeViewSelectionChangedEventArgs
 {
