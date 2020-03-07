@@ -257,7 +257,6 @@ ViewModel::ViewModel()
     auto selectedNodes = winrt::make_self<SelectedTreeNodeVector>();
     selectedNodes->SetViewModel(*this);
     m_selectedNodes.set(*selectedNodes);
-    m_selectedNodes.get().
 
     auto selectedItems = winrt::make_self<SelectedItemsVector>();
     selectedItems->SetViewModel(*this);
@@ -395,7 +394,7 @@ void ViewModel::InsertAt(uint32_t index, winrt::IInspectable const& value)
     GetVectorInnerImpl()->InsertAt(index, value);
     winrt::TreeViewNode newNode = value.as<winrt::TreeViewNode>();
 
-    //Hook up events and save tokens
+    // Hook up events and save tokens
     auto tvnNewNode = winrt::get_self<TreeViewNode>(newNode);
     m_collectionChangedEventTokenVector.insert(m_collectionChangedEventTokenVector.begin() + index, tvnNewNode->ChildrenChanged({ this, &ViewModel::TreeViewNodeVectorChanged }));
     m_IsExpandedChangedEventTokenVector.insert(m_IsExpandedChangedEventTokenVector.begin() + index, tvnNewNode->AddExpandedChanged({ this, &ViewModel::TreeViewNodePropertyChanged }));
@@ -434,12 +433,12 @@ void ViewModel::RemoveAtEnd()
     auto current = inner->GetAt(Size() - 1).as<winrt::TreeViewNode>();
     inner->RemoveAtEnd();
 
-    // unhook events
+    // Unhook events
     auto tvnCurrent = winrt::get_self<TreeViewNode>(current);
     tvnCurrent->ChildrenChanged(m_collectionChangedEventTokenVector.back());
     tvnCurrent->RemoveExpandedChanged(m_IsExpandedChangedEventTokenVector.back());
 
-    // remove tokens
+    // Remove tokens
     m_collectionChangedEventTokenVector.pop_back();
     m_IsExpandedChangedEventTokenVector.pop_back();
 }
