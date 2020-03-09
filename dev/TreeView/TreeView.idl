@@ -98,8 +98,8 @@ runtimeclass TreeViewDragItemsCompletedEventArgs
 [webhosthidden]
 runtimeclass TreeViewSelectionChangedEventArgs
 {
-    Windows.Foundation.Collections.IVectorView<Object> AddedItems{ get; };
-    Windows.Foundation.Collections.IVectorView<Object> RemovedItems{ get; };
+    Windows.Foundation.Collections.IVector<Object> AddedItems{ get; };
+    Windows.Foundation.Collections.IVector<Object> RemovedItems{ get; };
 }
 
 [WUXC_VERSION_RS4]

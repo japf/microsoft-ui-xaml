@@ -9,6 +9,7 @@
 #include "TreeViewCollapsedEventArgs.h"
 #include "TreeViewDragItemsStartingEventArgs.h"
 #include "TreeViewDragItemsCompletedEventArgs.h"
+#include "TreeViewSelectionChangedEventArgs.h"
 
 #include "TreeView.g.h"
 #include "TreeView.properties.h"
