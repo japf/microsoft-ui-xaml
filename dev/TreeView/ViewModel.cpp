@@ -135,7 +135,7 @@ public:
         if (auto viewModel = m_viewModel.get())
         {
             auto selectedItems = viewModel->GetSelectedItems();
-            if (Size() != selectedItems.Size())
+            if (selectedItems.Size() != Size())
             {
                 selectedItems.RemoveAt(index);
             }
@@ -258,6 +258,15 @@ ViewModel::ViewModel()
     selectedNodes->SetViewModel(*this);
     m_selectedNodes.set(*selectedNodes);
 
+    /* m_primaryCommandsVectorChangedToken = */ selectedNodes->VectorChanged({
+        [this](winrt::IObservableVector<winrt::TreeViewNode> const& sender, winrt::IVectorChangedEventArgs const& args)
+        {
+            auto c = args.CollectionChange();
+            uint32_t index = args.Index();
+        }
+        });
+
+
     auto selectedItems = winrt::make_self<SelectedItemsVector>();
     selectedItems->SetViewModel(*this);
     m_selectedItems.set(*selectedItems);
@@ -310,13 +319,92 @@ void ViewModel::NodeCollapsed(const winrt::event_token token)
 
 void ViewModel::SelectAll()
 {
+    // BEGIN
+    auto clearSelecting = gsl::finally([this]()
+        {
+            m_selectionTrackingCounter--;
+            if (m_selectionTrackingCounter == 0) {
+
+            }
+        });
+    m_selectionTrackingCounter++;
+
     UpdateSelection(m_originNode.get(), TreeNodeSelectionState::Selected);
+    // END
 }
 
-void ViewModel::ModifySelectByIndex(int index, TreeNodeSelectionState const& state)
+void ViewModel::SelectItem(winrt::IInspectable const& item)    
 {
+    // BEGIN
+    auto clearSelecting = gsl::finally([this]()
+        {
+            m_selectionTrackingCounter--;
+            if (m_selectionTrackingCounter == 0) {
+
+            }
+        });
+    m_selectionTrackingCounter++;
+
+    auto selectedItems = GetSelectedItems();
+    if (selectedItems.Size() > 0)
+    {
+        selectedItems.Clear();
+    }
+    if (item)
+    {
+        selectedItems.Append(item);
+    }
+    // END
+}
+
+void ViewModel::SelectNode(const winrt::TreeViewNode& node, bool isSelected)
+{
+    // BEGIN
+    auto clearSelecting = gsl::finally([this]()
+        {
+            m_selectionTrackingCounter--;
+            if (m_selectionTrackingCounter == 0) {
+
+            }
+        });
+    m_selectionTrackingCounter++;
+
+    // TODO: could we use UpdateSelection() here instead?
+    auto selectedNodes = GetSelectedNodes();
+    if (isSelected)
+    {
+        if (IsInSingleSelectionMode() && selectedNodes.Size() > 0)
+        {
+            selectedNodes.Clear();
+        }
+        selectedNodes.Append(node);
+    }
+    else
+    {
+        unsigned int index;
+        if (selectedNodes.IndexOf(node, index))
+        {
+            selectedNodes.RemoveAt(index);
+        }
+    }
+    // END
+}
+
+void ViewModel::SelectByIndex(int index, TreeNodeSelectionState const& state)
+{
+    // BEGIN
+    gsl::final_action clearSelecting = gsl::finally([this]()
+        {
+            m_selectionTrackingCounter--;
+            if (m_selectionTrackingCounter == 0) {
+
+            }
+        });
+    m_selectionTrackingCounter++;
+
     auto targetNode = GetNodeAt(index);
     UpdateSelection(targetNode, state);
+    // END
 }
 
 uint32_t ViewModel::Size()

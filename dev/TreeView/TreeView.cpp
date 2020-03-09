@@ -92,14 +92,12 @@ winrt::IVector<winrt::TreeViewNode> TreeView::SelectedNodes()
 
 void TreeView::SelectedItem(winrt::IInspectable const& item)
 {
-    auto selectedItems = SelectedItems();
-    if (selectedItems.Size() > 0)
+    if (auto listControl = ListControl())
     {
-        selectedItems.Clear();
-    }
-    if (item)
-    {
-        selectedItems.Append(item);
+        if (auto viewModel = listControl->ListViewModel())
+        {
+            viewModel->SelectItem(item);
+        }
     }
 }
 
@@ -130,23 +128,7 @@ void TreeView::UpdateSelection(winrt::TreeViewNode const& node, bool isSelected)
         {
             if (isSelected != viewModel->IsNodeSelected(node))
             {
-                auto selectedNodes = viewModel->GetSelectedNodes();
-                if (isSelected)
-                {
-                    if (SelectionMode() == winrt::TreeViewSelectionMode::Single && selectedNodes.Size() > 0)
-                    {
-                        selectedNodes.Clear();
-                    }
-                    selectedNodes.Append(node);
-                }
-                else
-                {
-                    unsigned int index;
-                    if (selectedNodes.IndexOf(node, index))
-                    {
-                        selectedNodes.RemoveAt(index);
-                    }
-                }
+                viewModel->SelectNode(node, isSelected);
             }
         }
     }

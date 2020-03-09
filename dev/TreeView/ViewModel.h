@@ -31,7 +31,9 @@ public:
     winrt::event_token NodeCollapsed(const winrt::TypedEventHandler<winrt::TreeViewNode, winrt::IInspectable>& handler);
     void NodeCollapsed(const winrt::event_token token);
     void SelectAll();
-    void ModifySelectByIndex(int index, TreeNodeSelectionState const& state);
+    void SelectItem(winrt::IInspectable const& item);
+    void SelectNode(const winrt::TreeViewNode& node, bool isSelected);
+    void SelectByIndex(int index, TreeNodeSelectionState const& state);
     winrt::TreeViewNode GetNodeAt(uint32_t index);
     bool IndexOfNode(winrt::TreeViewNode const& targetNode, uint32_t& index);
     void IsContentMode(const bool value);
@@ -87,6 +89,7 @@ private:
     bool m_isContentMode{ false };
     tracker_ref<winrt::IVector<winrt::IInspectable>> m_selectedItems{ this };
     tracker_ref<winrt::IMap<winrt::IInspectable, winrt::TreeViewNode>> m_itemToNodeMap{ this };
+    uint32_t m_selectionTrackingCounter;
 
     // Methods
     winrt::TreeViewNode GetRemovedChildTreeViewNodeByIndex(winrt::TreeViewNode const& node, unsigned int childIndex);
