@@ -30,6 +30,7 @@ using TreeViewItem = Microsoft.UI.Xaml.Controls.TreeViewItem;
 using TreeViewList = Microsoft.UI.Xaml.Controls.TreeViewList;
 using TreeViewNode = Microsoft.UI.Xaml.Controls.TreeViewNode;
 using TreeViewSelectionMode = Microsoft.UI.Xaml.Controls.TreeViewSelectionMode;
+using Microsoft.UI.Xaml.Controls;
 
 namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
 {
@@ -499,6 +500,47 @@ namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
             TestUtilities.SetAsVisualTreeRoot(treeView);
 
             VisualTreeTestHelper.VerifyVisualTree(root: treeView, masterFilePrefix: "TreeView");
+        }
+
+        [TestMethod]
+        public void SingleSelectionChanged()
+        {
+            RunOnUIThread.Execute(() =>
+            {
+                TreeViewSelectionChangedEventArgs selectionChangedEventArgs = null;
+
+                var treeView = new TreeView { SelectionMode = TreeViewSelectionMode.Single };
+                treeView.SelectionChanged += (s, e) => selectionChangedEventArgs = e;
+
+                var collection = new ObservableCollection<int> { 1, 2, 3 };
+                treeView.ItemsSource = collection;
+                Content = treeView;
+                Content.UpdateLayout();
+                var tvi1 = (TreeViewItem)treeView.ContainerFromItem(1);
+                var tvi2 = (TreeViewItem)treeView.ContainerFromItem(2);
+
+                tvi1.IsSelected = true;
+
+                Verify.IsNotNull(selectionChangedEventArgs);
+                Verify.AreEqual(1, selectionChangedEventArgs.AddedItems.Count);
+                Verify.AreEqual(1, selectionChangedEventArgs.AddedItems[0]);
+                Verify.AreEqual(0, selectionChangedEventArgs.RemovedItems.Count);
+
+                tvi2.IsSelected = true;
+
+                Verify.IsNotNull(selectionChangedEventArgs);
+                Verify.AreEqual(1, selectionChangedEventArgs.AddedItems.Count);
+                Verify.AreEqual(2, selectionChangedEventArgs.AddedItems[0]);
+                Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems.Count);
+                Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems[0]);
+
+                tvi2.IsSelected = false;
+
+                Verify.IsNotNull(selectionChangedEventArgs);
+                Verify.AreEqual(0, selectionChangedEventArgs.AddedItems.Count);
+                Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems.Count);
+                Verify.AreEqual(2, selectionChangedEventArgs.RemovedItems[0]);
+            });
         }
 
         private bool IsMultiSelectCheckBoxChecked(TreeView tree, TreeViewNode node)
