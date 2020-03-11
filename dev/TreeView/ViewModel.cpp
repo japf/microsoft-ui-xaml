@@ -122,6 +122,7 @@ public:
                     if (auto item = winrt::get_self<TreeViewList>(listControl)->ItemFromNode(node))
                     {
                         selectedItems.InsertAt(index, item);
+                        viewModel->GetAddedSelectedItems().Append(item);
                     }
                 }
             }
@@ -138,7 +139,9 @@ public:
             auto selectedItems = viewModel->GetSelectedItems();
             if (selectedItems.Size() != Size())
             {
+                const auto item = selectedItems.GetAt(index);
                 selectedItems.RemoveAt(index);
+                viewModel->GetRemovedSelectedItems().Append(item);
             }
         }
     }
@@ -263,6 +266,9 @@ ViewModel::ViewModel()
     selectedItems->SetViewModel(*this);
     m_selectedItems.set(*selectedItems);
 
+    m_addedSelectedItems.set(winrt::make<Vector<winrt::IInspectable>>());
+    m_removedSelectedItems.set(winrt::make<Vector<winrt::IInspectable>>());
+
     m_itemToNodeMap.set(winrt::make<HashMap<winrt::IInspectable, winrt::TreeViewNode>>());
     m_selectionTrackingCounter = 0;
 }
@@ -373,48 +379,17 @@ void ViewModel::BeginSelectionChanges()
 {
     m_selectionTrackingCounter++;
     if (m_selectionTrackingCounter == 1) {
-        // save current SelectedItems
-        auto original = m_selectedItems.get();
-        std::vector<winrt::IInspectable> temp{ original.Size() };
-        original.GetMany(0, temp);
-        m_OldSelectedItems.set(winrt::single_threaded_vector(std::move(temp)));
+        m_addedSelectedItems.get().Clear();
+        m_removedSelectedItems.get().Clear();
     }
 }
 
 void ViewModel::EndSelectionChanges()
 {
     m_selectionTrackingCounter--;
-    if (m_selectionTrackingCounter == 0 && m_OldSelectedItems.get().Size() != m_selectedItems.get().Size()) {
-        // raise the SelectionChanged event
-        winrt::IVector<winrt::IInspectable> removedItems{ winrt::single_threaded_vector<winrt::IInspectable>() };
-        winrt::IVector<winrt::IInspectable> addedItems{ winrt::single_threaded_vector<winrt::IInspectable>() };
-        for (const auto &newItem : m_selectedItems.get()) {
-            bool added = true;
-            for (const auto& oldItem : m_OldSelectedItems.get()) {
-                if (newItem == oldItem) {
-                    added = false;
-                    break;
-                }
-            }
-            if (added) {
-                addedItems.Append(newItem);
-            }
-        }
-        for (const auto& oldItem : m_OldSelectedItems.get()) {
-            bool removed = true;
-            for (const auto& newItem : m_selectedItems.get()) {
-                if (newItem == oldItem) {
-                    removed = false;
-                    break;
-                }
-            }
-            if (removed) {
-                removedItems.Append(oldItem);
-            }
-        }
-
+    if (m_selectionTrackingCounter == 0 && (m_addedSelectedItems.get().Size() > 0 || m_removedSelectedItems.get().Size() > 0)) {
         auto treeView = winrt::get_self<TreeView>(m_TreeView.get());
-        treeView->RaiseSelectionChanged(addedItems, removedItems);
+        treeView->RaiseSelectionChanged(m_addedSelectedItems.get(), m_removedSelectedItems.get());
     }
 }
 
@@ -900,6 +875,16 @@ winrt::IVector<winrt::TreeViewNode> ViewModel::GetSelectedNodes()
 winrt::IVector<winrt::IInspectable> ViewModel::GetSelectedItems()
 {
     return m_selectedItems.get();
+}
+
+winrt::IVector<winrt::IInspectable> ViewModel::GetAddedSelectedItems()
+{
+    return m_addedSelectedItems.get();
+}
+
+winrt::IVector<winrt::IInspectable> ViewModel::GetRemovedSelectedItems()
+{
+    return m_removedSelectedItems.get();
 }
 
 winrt::TreeViewNode ViewModel::GetAssociatedNode(winrt::IInspectable item)

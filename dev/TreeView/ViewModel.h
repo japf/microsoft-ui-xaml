@@ -72,6 +72,8 @@ public:
     void UpdateSelection(winrt::TreeViewNode const& selectNode, TreeNodeSelectionState const& selectionState);
     winrt::IVector<winrt::TreeViewNode> GetSelectedNodes();
     winrt::IVector<winrt::IInspectable> GetSelectedItems();
+    winrt::IVector<winrt::IInspectable> GetAddedSelectedItems();
+    winrt::IVector<winrt::IInspectable> GetRemovedSelectedItems();
     void NotifyContainerOfSelectionChange(winrt::TreeViewNode const& targetNode, TreeNodeSelectionState const& selectionState);
 
     winrt::TreeViewNode GetAssociatedNode(winrt::IInspectable item);
@@ -89,7 +91,8 @@ private:
     tracker_ref<winrt::TreeViewNode> m_originNode{ this };
     bool m_isContentMode{ false };
     tracker_ref<winrt::IVector<winrt::IInspectable>> m_selectedItems{ this };
-    tracker_ref<winrt::IVector<winrt::IInspectable>> m_OldSelectedItems{ this };
+    tracker_ref<winrt::IVector<winrt::IInspectable>> m_addedSelectedItems{ this };
+    tracker_ref<winrt::IVector<winrt::IInspectable>> m_removedSelectedItems{ this };
     tracker_ref<winrt::IMap<winrt::IInspectable, winrt::TreeViewNode>> m_itemToNodeMap{ this };
     uint32_t m_selectionTrackingCounter;
 
