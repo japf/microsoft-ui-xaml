@@ -21,7 +21,6 @@ using TreeViewItemInvokedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewItemInvo
 using TreeViewExpandingEventArgs = Microsoft.UI.Xaml.Controls.TreeViewExpandingEventArgs;
 using TreeViewDragItemsStartingEventArgs = Microsoft.UI.Xaml.Controls.TreeViewDragItemsStartingEventArgs;
 using TreeViewDragItemsCompletedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewDragItemsCompletedEventArgs;
-using TreeViewSelectionChangedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewSelectionChangedEventArgs;
 using TreeViewList = Microsoft.UI.Xaml.Controls.TreeViewList;
 using TreeViewItem = Microsoft.UI.Xaml.Controls.TreeViewItem;
 using MaterialHelperTestApi = Microsoft.UI.Private.Media.MaterialHelperTestApi;
