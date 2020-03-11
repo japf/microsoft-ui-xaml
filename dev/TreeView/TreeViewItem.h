@@ -70,7 +70,7 @@ private:
     void HandleReorder(winrt::VirtualKey key);
     bool HandleExpandCollapse(winrt::VirtualKey key);
     void HandleGamepadAInMultiselectMode(const winrt::TreeViewNode& node);
-    bool ToggleSelection();
+    bool TreeViewItem::ToggleSelection();
     void OnExpandCollapseChevronPointerPressed(
         const winrt::IInspectable& /*sender*/,
         const winrt::PointerRoutedEventArgs& args);
