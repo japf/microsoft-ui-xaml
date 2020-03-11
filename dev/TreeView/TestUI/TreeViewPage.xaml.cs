@@ -21,10 +21,12 @@ using TreeViewItemInvokedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewItemInvo
 using TreeViewExpandingEventArgs = Microsoft.UI.Xaml.Controls.TreeViewExpandingEventArgs;
 using TreeViewDragItemsStartingEventArgs = Microsoft.UI.Xaml.Controls.TreeViewDragItemsStartingEventArgs;
 using TreeViewDragItemsCompletedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewDragItemsCompletedEventArgs;
+using TreeViewSelectionChangedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewSelectionChangedEventArgs;
 using TreeViewList = Microsoft.UI.Xaml.Controls.TreeViewList;
 using TreeViewItem = Microsoft.UI.Xaml.Controls.TreeViewItem;
 using MaterialHelperTestApi = Microsoft.UI.Private.Media.MaterialHelperTestApi;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace MUXControlsTestApp
 {
@@ -61,8 +63,6 @@ namespace MUXControlsTestApp
             var item1 = new TreeViewItemSource() { Content = "item1" };
             var item2 = new TreeViewItemSource() { Content = "item2" };
             TestTreeView2ItemsSource = new ObservableCollection<TreeViewItemSource>() { item1, item2 };
-
-            Loaded += (s, e) => RunTests();
         }
 
         private ObservableCollection<TreeViewItemSource> PrepareItemsSource(bool expandRootNode = false)
@@ -142,153 +142,13 @@ namespace MUXControlsTestApp
 
         private void GetSelected_Click(object sender, RoutedEventArgs e)
         {
-        }
-
-        public void RunTests()
-        {
-            MultipleSelectionChanged();
-        }
-
-        public void SingleSelectionChanged()
-        {        
-            // input data:
-            // - 1
-            // - 2
-            // - 3
-            TreeViewSelectionChangedEventArgs selectionChangedEventArgs = null;
-
-            var treeView = new TreeView { SelectionMode = TreeViewSelectionMode.Single };
-            treeView.SelectionChanged += (s, e1) => selectionChangedEventArgs = e1;
-
-            var collection = new ObservableCollection<int> { 1, 2, 3 };
-            treeView.ItemsSource = collection;
-            Content = treeView;
-            Content.UpdateLayout();
-            var tvi1 = (TreeViewItem)treeView.ContainerFromItem(1);
-            var tvi2 = (TreeViewItem)treeView.ContainerFromItem(2);
-
-            tvi1.IsSelected = true;
-
-            Verify.IsNotNull(selectionChangedEventArgs);
-            Verify.AreEqual(1, selectionChangedEventArgs.AddedItems.Count);
-            Verify.AreEqual(1, selectionChangedEventArgs.AddedItems[0]);
-            Verify.AreEqual(0, selectionChangedEventArgs.RemovedItems.Count);
-
-            tvi2.IsSelected = true;
-
-            Verify.IsNotNull(selectionChangedEventArgs);
-            Verify.AreEqual(1, selectionChangedEventArgs.AddedItems.Count);
-            Verify.AreEqual(2, selectionChangedEventArgs.AddedItems[0]);
-            Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems.Count);
-            Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems[0]);
-
-            tvi2.IsSelected = false;
-
-            Verify.IsNotNull(selectionChangedEventArgs);
-            Verify.AreEqual(0, selectionChangedEventArgs.AddedItems.Count);
-            Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems.Count);
-            Verify.AreEqual(2, selectionChangedEventArgs.RemovedItems[0]);
-
-            tvi1.IsSelected = true;
-
-            Verify.IsNotNull(selectionChangedEventArgs);
-            Verify.AreEqual(1, selectionChangedEventArgs.AddedItems.Count);
-            Verify.AreEqual(1, selectionChangedEventArgs.AddedItems[0]);
-            Verify.AreEqual(0, selectionChangedEventArgs.RemovedItems.Count);
-
-            treeView.ItemsSource = null;
-
-            Verify.IsNotNull(selectionChangedEventArgs);
-            Verify.AreEqual(0, selectionChangedEventArgs.AddedItems.Count);
-            Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems.Count);
-            Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems[0]);
-        }
-
-        public void MultipleSelectionChanged()
-        {
-            // input data:
-            // - 1
-            //   - 11
-            //   - 12
-            //   - 13
-            // - 2
-            //   - 21
-            // - 3
-            TreeViewSelectionChangedEventArgs selectionChangedEventArgs = null;
-
-            var treeView = new TreeView { SelectionMode = TreeViewSelectionMode.Multiple };
-            treeView.SelectionChanged += (s, e1) => selectionChangedEventArgs = e1;
-
-            var node1 = new TreeViewNode { Content = "1", IsExpanded = true };
-            var node11 = new TreeViewNode { Content = "11" };
-            var node12 = new TreeViewNode { Content = "12" };
-            var node13 = new TreeViewNode { Content = "13" };
-            node1.Children.Add(node11);
-            node1.Children.Add(node12);
-            node1.Children.Add(node13);
-
-            var node2 = new TreeViewNode { Content = "2", IsExpanded = true };
-            var node21 = new TreeViewNode { Content = "21" };
-            node2.Children.Add(node21);
-
-            var node3 = new TreeViewNode { Content = "3" };
-
-            treeView.RootNodes.Add(node1);
-            treeView.RootNodes.Add(node2);
-            treeView.RootNodes.Add(node3);
-            Content = treeView;
-            Content.UpdateLayout();
-
-            var tvi1 = (TreeViewItem)treeView.ContainerFromItem(node1);
-            var tvi11 = (TreeViewItem)treeView.ContainerFromItem(node11);
-            var tvi12 = (TreeViewItem)treeView.ContainerFromItem(node12);
-            var tvi13 = (TreeViewItem)treeView.ContainerFromItem(node13);
-            var tvi2 = (TreeViewItem)treeView.ContainerFromItem(node2);
-            var tvi21 = (TreeViewItem)treeView.ContainerFromItem(node21);
-            var tvi3 = (TreeViewItem)treeView.ContainerFromItem(node3);
-
-            tvi1.IsSelected = true;
-
-            Verify.IsNotNull(selectionChangedEventArgs);
-            Verify.AreEqual(4, selectionChangedEventArgs.AddedItems.Count);
-            Verify.AreEqual(node1, selectionChangedEventArgs.AddedItems[0]);
-            Verify.AreEqual(node11, selectionChangedEventArgs.AddedItems[1]);
-            Verify.AreEqual(node12, selectionChangedEventArgs.AddedItems[2]);
-            Verify.AreEqual(node13, selectionChangedEventArgs.AddedItems[3]);
-            Verify.AreEqual(0, selectionChangedEventArgs.RemovedItems.Count);
-
-            tvi11.IsSelected = false;
-
-            Verify.IsNotNull(selectionChangedEventArgs);
-            Verify.AreEqual(0, selectionChangedEventArgs.AddedItems.Count);
-            Verify.AreEqual(1, selectionChangedEventArgs.RemovedItems.Count);
-            Verify.AreEqual(node11, selectionChangedEventArgs.RemovedItems[0]);
-        }
-
-        private static class Verify
-        {
-            public static void IsNotNull(object obj)
+            if (IsInContentMode())
             {
-                if (obj == null)
-                {
-                    throw new InvalidOperationException();
-                }
+                Results.Text = GetSelection(ContentModeTestTreeView);
             }
-
-            public static void AreEqual(int expected, int actual)
+            else
             {
-                if (expected != actual)
-                {
-                    throw new InvalidOperationException();
-                }
-            }
-
-            public static void AreEqual(object expected, object actual)
-            {
-                if (!expected.Equals(actual))
-                {
-                    throw new InvalidOperationException();
-                }
+                Results.Text = GetSelection(TestTreeView);
             }
         }
 

@@ -30,7 +30,7 @@ using TreeViewItem = Microsoft.UI.Xaml.Controls.TreeViewItem;
 using TreeViewList = Microsoft.UI.Xaml.Controls.TreeViewList;
 using TreeViewNode = Microsoft.UI.Xaml.Controls.TreeViewNode;
 using TreeViewSelectionMode = Microsoft.UI.Xaml.Controls.TreeViewSelectionMode;
-using Microsoft.UI.Xaml.Controls;
+using TreeViewSelectionChangedEventArgs = Microsoft.UI.Xaml.Controls.TreeViewSelectionChangedEventArgs;
 
 namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
 {
