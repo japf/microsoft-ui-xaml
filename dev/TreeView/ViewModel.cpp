@@ -345,7 +345,6 @@ void ViewModel::SelectNode(const winrt::TreeViewNode& node, bool isSelected)
     BeginSelectionChanges();
     auto trackSelection = gsl::finally([this]() { EndSelectionChanges(); });
 
-    // TODO: could we use UpdateSelection() here instead?
     auto selectedNodes = GetSelectedNodes();
     if (isSelected)
     {
@@ -363,7 +362,6 @@ void ViewModel::SelectNode(const winrt::TreeViewNode& node, bool isSelected)
             selectedNodes.RemoveAt(index);
         }
     }
-    // END
 }
 
 void ViewModel::SelectByIndex(int index, TreeNodeSelectionState const& state)
@@ -377,19 +375,25 @@ void ViewModel::SelectByIndex(int index, TreeNodeSelectionState const& state)
 
 void ViewModel::BeginSelectionChanges()
 {
-    m_selectionTrackingCounter++;
-    if (m_selectionTrackingCounter == 1) {
-        m_addedSelectedItems.get().Clear();
-        m_removedSelectedItems.get().Clear();
+    if (!IsInSingleSelectionMode())
+    {
+        m_selectionTrackingCounter++;
+        if (m_selectionTrackingCounter == 1) {
+            m_addedSelectedItems.get().Clear();
+            m_removedSelectedItems.get().Clear();
+        }
     }
 }
 
 void ViewModel::EndSelectionChanges()
 {
-    m_selectionTrackingCounter--;
-    if (m_selectionTrackingCounter == 0 && (m_addedSelectedItems.get().Size() > 0 || m_removedSelectedItems.get().Size() > 0)) {
-        auto treeView = winrt::get_self<TreeView>(m_TreeView.get());
-        treeView->RaiseSelectionChanged(m_addedSelectedItems.get(), m_removedSelectedItems.get());
+    if (!IsInSingleSelectionMode())
+    {
+        m_selectionTrackingCounter--;
+        if (m_selectionTrackingCounter == 0 && (m_addedSelectedItems.get().Size() > 0 || m_removedSelectedItems.get().Size() > 0)) {
+            auto treeView = winrt::get_self<TreeView>(m_TreeView.get());
+            treeView->RaiseSelectionChanged(m_addedSelectedItems.get(), m_removedSelectedItems.get());
+        }
     }
 }
 
@@ -879,7 +883,7 @@ winrt::IVector<winrt::IInspectable> ViewModel::GetSelectedItems()
 
 void ViewModel::TrackItemSelected(winrt::IInspectable item)
 {
-    if (item != m_originNode.safe_get())
+    if (m_selectionTrackingCounter > 0 && item != m_originNode.safe_get())
     {
         m_addedSelectedItems.get().Append(item);
     }
@@ -887,7 +891,7 @@ void ViewModel::TrackItemSelected(winrt::IInspectable item)
 
 void ViewModel::TrackItemUnselected(winrt::IInspectable item)
 {
-    if (item != m_originNode.safe_get())
+    if (m_selectionTrackingCounter > 0 && item != m_originNode.safe_get())
     {
         m_removedSelectedItems.get().Append(item);
     }
