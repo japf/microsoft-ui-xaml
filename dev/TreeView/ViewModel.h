@@ -72,8 +72,8 @@ public:
     void UpdateSelection(winrt::TreeViewNode const& selectNode, TreeNodeSelectionState const& selectionState);
     winrt::IVector<winrt::TreeViewNode> GetSelectedNodes();
     winrt::IVector<winrt::IInspectable> GetSelectedItems();
-    winrt::IVector<winrt::IInspectable> GetAddedSelectedItems();
-    winrt::IVector<winrt::IInspectable> GetRemovedSelectedItems();
+    void TrackItemSelected(winrt::IInspectable item);
+    void TrackItemUnselected(winrt::IInspectable item);
     void NotifyContainerOfSelectionChange(winrt::TreeViewNode const& targetNode, TreeNodeSelectionState const& selectionState);
 
     winrt::TreeViewNode GetAssociatedNode(winrt::IInspectable item);

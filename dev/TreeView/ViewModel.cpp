@@ -122,7 +122,7 @@ public:
                     if (auto item = winrt::get_self<TreeViewList>(listControl)->ItemFromNode(node))
                     {
                         selectedItems.InsertAt(index, item);
-                        viewModel->GetAddedSelectedItems().Append(item);
+                        viewModel->TrackItemSelected(item);
                     }
                 }
             }
@@ -141,7 +141,7 @@ public:
             {
                 const auto item = selectedItems.GetAt(index);
                 selectedItems.RemoveAt(index);
-                viewModel->GetRemovedSelectedItems().Append(item);
+                viewModel->TrackItemUnselected(item);
             }
         }
     }
@@ -877,14 +877,20 @@ winrt::IVector<winrt::IInspectable> ViewModel::GetSelectedItems()
     return m_selectedItems.get();
 }
 
-winrt::IVector<winrt::IInspectable> ViewModel::GetAddedSelectedItems()
+void ViewModel::TrackItemSelected(winrt::IInspectable item)
 {
-    return m_addedSelectedItems.get();
+    if (item != m_originNode.safe_get())
+    {
+        m_addedSelectedItems.get().Append(item);
+    }
 }
 
-winrt::IVector<winrt::IInspectable> ViewModel::GetRemovedSelectedItems()
+void ViewModel::TrackItemUnselected(winrt::IInspectable item)
 {
-    return m_removedSelectedItems.get();
+    if (item != m_originNode.safe_get())
+    {
+        m_removedSelectedItems.get().Append(item);
+    }
 }
 
 winrt::TreeViewNode ViewModel::GetAssociatedNode(winrt::IInspectable item)
