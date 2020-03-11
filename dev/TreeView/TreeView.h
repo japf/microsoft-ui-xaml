@@ -37,6 +37,7 @@ public:
     winrt::IVector<winrt::IInspectable> SelectedItems();
 
     void UpdateSelection(winrt::TreeViewNode const& node, bool isSelected);
+    void RaiseSelectionChanged(const winrt::IVector<winrt::IInspectable> addedItems, const winrt::IVector<winrt::IInspectable> removedItems);
 
     void Expand(winrt::TreeViewNode const& value);
     void Collapse(winrt::TreeViewNode const& value);

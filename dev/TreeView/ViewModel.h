@@ -64,7 +64,7 @@ public:
 
     // Helper functions
     void PrepareView(winrt::TreeViewNode const& originNode);
-    void SetOwningList(winrt::TreeViewList const& owningList);
+    void SetOwners(winrt::TreeViewList const& owningList, winrt::TreeView const& owningTreeView);
     winrt::TreeViewList ListControl();
     bool IsInSingleSelectionMode();
     bool IsNodeSelected(winrt::TreeViewNode const& targetNode);
@@ -85,9 +85,11 @@ private:
     std::vector<winrt::event_token> m_IsExpandedChangedEventTokenVector;
     winrt::event_token m_rootNodeChildrenChangedEventToken;
     winrt::weak_ref<winrt::TreeViewList> m_TreeViewList{ nullptr };
+    winrt::weak_ref<winrt::TreeView> m_TreeView{ nullptr };
     tracker_ref<winrt::TreeViewNode> m_originNode{ this };
     bool m_isContentMode{ false };
     tracker_ref<winrt::IVector<winrt::IInspectable>> m_selectedItems{ this };
+    tracker_ref<winrt::IVector<winrt::IInspectable>> m_OldSelectedItems{ this };
     tracker_ref<winrt::IMap<winrt::IInspectable, winrt::TreeViewNode>> m_itemToNodeMap{ this };
     uint32_t m_selectionTrackingCounter;
 
@@ -106,4 +108,6 @@ private:
     void UpdateSelectionStateOfAncestors(winrt::TreeViewNode const& targetNode);
     TreeNodeSelectionState SelectionStateBasedOnChildren(winrt::TreeViewNode const& node);
     void ClearEventTokenVectors();
+    void BeginSelectionChanges();
+    void EndSelectionChanges();
 };

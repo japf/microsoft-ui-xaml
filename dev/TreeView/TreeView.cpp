@@ -289,8 +289,10 @@ void TreeView::OnListControlDragItemsCompleted(const winrt::IInspectable& sender
 
 void TreeView::OnListControlSelectionChanged(const winrt::IInspectable& sender, const winrt::SelectionChangedEventArgs& args)
 {
-    const auto treeViewArgs = winrt::make_self<TreeViewSelectionChangedEventArgs>(args.AddedItems(), args.RemovedItems());
-    m_selectionChangedEventSource(*this, *treeViewArgs);
+    if (SelectionMode() == winrt::TreeViewSelectionMode::Single)
+    {
+        RaiseSelectionChanged(args.AddedItems(), args.RemovedItems());
+    }
 }
 
 void TreeView::UpdateItemsSelectionMode(bool isMultiSelect)
@@ -328,6 +330,12 @@ void TreeView::UpdateItemsSelectionMode(bool isMultiSelect)
     }
 }
 
+void TreeView::RaiseSelectionChanged(const winrt::IVector<winrt::IInspectable> addedItems, const winrt::IVector<winrt::IInspectable> removedItems)
+{
+    const auto treeViewArgs = winrt::make_self<TreeViewSelectionChangedEventArgs>(addedItems, removedItems);
+    m_selectionChangedEventSource(*this, *treeViewArgs);
+}
+
 void TreeView::OnApplyTemplate()
 {
     winrt::IControlProtected controlProtected = *this;
@@ -347,7 +355,7 @@ void TreeView::OnApplyTemplate()
             viewModel->IsContentMode(true);
         }
         viewModel->PrepareView(m_rootNode.get());
-        viewModel->SetOwningList(listControl);
+        viewModel->SetOwners(listControl, *this);
         viewModel->NodeExpanding({ this, &TreeView::OnNodeExpanding });
         viewModel->NodeCollapsed({ this, &TreeView::OnNodeCollapsed });
 
